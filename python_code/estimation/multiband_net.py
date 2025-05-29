@@ -261,17 +261,17 @@ class Decoder(nn.Module):
 # Multi Band SubSpaceNET
 class Multi_Band_SubSpaceNET(nn.Module):
     def __init__(self, 
-                 encoder_6k: Encoder_6k,
-                 encoder_12k: Encoder_12k,
-                 encoder_18k: Encoder_18k,
-                 encoder_24k: Encoder_24k,
-                 decoder: Decoder):
+                 encoder_6k = None,
+                 encoder_12k = None,
+                 encoder_18k = None,
+                 encoder_24k = None,
+                 decoder = None):
         super(Multi_Band_SubSpaceNET, self).__init__()
-        self.encoder_6k = encoder_6k
-        self.encoder_12k = encoder_12k
-        self.encoder_18k = encoder_18k
-        self.encoder_24k = encoder_24k
-        self.decoder = decoder
+        self.encoder_6k = encoder_6k if encoder_6k else Encoder_6k() 
+        self.encoder_12k = encoder_12k if encoder_12k else Encoder_12k()
+        self.encoder_18k = encoder_18k if encoder_18k else Encoder_18k()
+        self.encoder_24k = encoder_24k if encoder_24k else Encoder_24k()
+        self.decoder = decoder if decoder else Decoder()
 
     def forward(self, x_list):
         x6, x12, x18, x24 = x_list

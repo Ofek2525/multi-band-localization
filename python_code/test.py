@@ -18,7 +18,7 @@ from dir_definitions import RAYTRACING_DIR
 from utils.check_if_close import too_close
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-model_path = r"z_exp/2025-05-20_10:02#multiband#ues=2,k=[20, 20, 20, 20],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[4, 4, 4, 4],NS=50,input_power=10dBm/model_params.pth"
+model_path = r"z_exp/2025-05-24_23:56#deffrent_postprocess#ues=2,k=[20, 20, 20, 20],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[4, 4, 4, 4],NS=50,input_power=10dBm/model_params.pth"
 
 def test_multi_ue(band: Band, num_users: int, model_path):
     assert num_users <= 2
@@ -29,19 +29,7 @@ def test_multi_ue(band: Band, num_users: int, model_path):
         if len(fc) == 1:
             model = SubSpaceNET().to(DEVICE)
         elif len(fc) == 4:
-            encoder_6k = Encoder_6k()
-            encoder_12k = Encoder_12k()
-            encoder_18k = Encoder_18k()
-            encoder_24k = Encoder_24k()
-            decoder = Decoder()
-
-            model = Multi_Band_SubSpaceNET(
-                encoder_6k=encoder_6k,
-                encoder_12k=encoder_12k,
-                encoder_18k=encoder_18k,
-                encoder_24k=encoder_24k,
-                decoder=decoder
-            ).to(DEVICE)
+            model = Multi_Band_SubSpaceNET().to(DEVICE)
         else:
             print("error with params")
         model.load_state_dict(torch.load(model_path, weights_only=True))
@@ -211,18 +199,7 @@ def sweep_input_power_multi_band_multi_ue(num_users: int, input_power_list: list
         # 3 for single band 18G with no net
         # 4 for single band 24G with no net
         if band == 0: 
-            encoder_6k = Encoder_6k()
-            encoder_12k = Encoder_12k()
-            encoder_18k = Encoder_18k()
-            encoder_24k = Encoder_24k()
-            decoder = Decoder()
-            model = Multi_Band_SubSpaceNET(
-                encoder_6k=encoder_6k,
-                encoder_12k=encoder_12k,
-                encoder_18k=encoder_18k,
-                encoder_24k=encoder_24k,
-                decoder=decoder
-            ).to(DEVICE)
+            model = Multi_Band_SubSpaceNET().to(DEVICE)
             model.load_state_dict(torch.load(model_path, weights_only=True))
             model.eval()
             bands = None

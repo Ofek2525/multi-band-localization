@@ -24,10 +24,10 @@ import random
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-experment_name = "multiband"
+experment_name = "deffrent_postprocess"
 load_path =r""
 #learning_rate=0.0001/4
-def train(learning_rate=1.5625e-04, batch_size=14, data_samples=200000, ues_num=2, step=4000, alpha = 0.5, experment_name = "", load_path =""):
+def train(learning_rate=15e-04, batch_size=20, data_samples=200000, ues_num=2, step=2000, alpha = 0.5, experment_name = "", load_path =""):
    
     #create experment dir
     date = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M")
