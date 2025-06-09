@@ -6,7 +6,7 @@ from itertools import combinations
 from scipy.optimize import linear_sum_assignment
 import os
 
-from channel.generate_channel import get_channel, random_pos_ues_channel
+from channel.generate_channel import get_channel
 from channel.channel_loader import get_ue_info_by_row
 from estimation.estimate import estimate_evaluation
 from estimation.net import single_nurone, SubSpaceNET
@@ -14,11 +14,12 @@ from estimation.multiband_net import Multi_Band_SubSpaceNET, Encoder_6k, Encoder
 from utils.bands_manipulation import get_bands_from_conf, Band
 from exp_params import seed, K, Nr, fc, BW, alg, aoa_res, T_res, plot_estimation_results
 from plotting.map_plot import plot_angle_time
-from dir_definitions import RAYTRACING_DIR
+from plotting.tests_plot import plots_of_MultiBandNet_to_music_singal_band,plots_of_compare_SubSpaceNET_to_music_singal_band
+from dir_definitions import RAYTRACING_DIR, ALLBSs_DIR
 from utils.check_if_close import too_close
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-model_path = r"z_exp/2025-05-24_23:56#deffrent_postprocess#ues=2,k=[20, 20, 20, 20],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[4, 4, 4, 4],NS=50,input_power=10dBm/model_params.pth"
+model_path = "z_exp/2025-06-05_15:04#multi_bs#ues=2,k=[20, 20, 20, 20],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[4, 4, 4, 4],NS=50,input_power=5dBm/model_params.pth"
 
 def test_multi_ue(band: Band, num_users: int, model_path):
     assert num_users <= 2
@@ -86,110 +87,31 @@ def test_multi_ue(band: Band, num_users: int, model_path):
 
 
 
-def sweep_input_power_single_band_multi_ue(band: Band, num_users: int, input_power_list: list[float],model_path):
-    assert num_users <= 2
-    torch.manual_seed(seed)
-    band_freq_file_in_k = int(band.fc / 1000)
-    csv_file = rf"{RAYTRACING_DIR}/{band_freq_file_in_k}000/LOS_bs1_{band_freq_file_in_k}k_test.csv"
-    df = pd.read_csv(csv_file)
-    num_rows = len(df)
 
-    ue_indices = list(range(num_rows))
-    comb_indices = list(combinations(ue_indices, num_users))
-
+def compare_SubSpaceNET_to_music_singal_band(num_users: int, input_power_list: list[float], model_path,band):
+    #compare the mse vs transmition power of our SubSpaceNET (singal band) method to music with singal band.
+    # band = 1 for single band 6G ,band = 2 for single band 12G ,band = 3 for 18G, band = 4 for 24G
+    assert num_users <= 3
+    assert band != 0
     results = {}
-
-    for no_nn in [1, 0]:
-        if no_nn == 0:
-            model = SubSpaceNET().to(DEVICE)
-            model.load_state_dict(torch.load(model_path, weights_only=True))
-            model.eval()
+    for no_NN in [0, 1]:
+        if no_NN == 0:
+            alg = 'MUSIC'
             print("-"*40)
             print(" "*15+"using our net"+" "*15)
         else:
-            model = single_nurone().to(DEVICE)
+            alg = 'MUSIC'
             print("-"*40)
-            print(" "*15+"without our net"+" "*15)
-
-        avg_errors = []
-        median_errors = []
-
-        for input_power in input_power_list:
-            total_error = 0
-            valid_comb_count = 0
-            error_list = []
-
-            for comb in comb_indices:
-                ue_locs = []
-                for row in comb:
-                    ue_info = get_ue_info_by_row(csv_file, row)
-                    ue_locs.append(ue_info['ue_loc'])
-                ue_locs_array = np.array(ue_locs)
-                if too_close(ue_locs_array,50): continue
-                error = test_1sample(model, ue_locs_array, input_power=input_power, toPrint=False, bands=bands)
-                total_error += error
-                error_list.append(error)
-                valid_comb_count += 1
-
-            avg_error = total_error / valid_comb_count
-            avg_errors.append(avg_error)
-            median_errors.append(np.median(error_list))
-            print("-"*40)
-            print(f"input power:{input_power}[dBm]")
-            print(f"Total {valid_comb_count} {num_users}-UE combinations tested.")
-            print(f"AVG error dist: {avg_error:.3f} [m]")
-            print(f"median error:{median_errors[-1]:.3f}[m]")
-            
-
-        results[no_nn] = (avg_errors, median_errors)
-        
-
-    # Plot
-    plt.figure(figsize=(8, 5))
-    plt.plot(input_power_list, results[0][0], marker='o', color='blue', label='Avg (with NN)')
-    plt.plot(input_power_list, results[1][0], marker='o', color='orange', label='Avg (no NN)')
-    
-    plt.title(f"Error vs Input Power - {num_users} UEs")
-    plt.xlabel("Input Power [dBm]")
-    plt.ylabel("Error [m]")
-    plt.grid(True)
-    plt.legend()
-    plt.tight_layout()
-    # Save to same folder as model_path
-    save_dir = os.path.dirname(model_path)
-    plt.savefig(os.path.join(save_dir, f"Avg_error_vs_input_power_{num_users}UEs.png"))
-    plt.savefig(os.path.join("results", f"Avg_error_vs_input_power_{num_users}UEs.png"))
-    plt.close()
-    
-    plt.figure(figsize=(8, 5))
-    plt.plot(input_power_list, results[0][1], marker='s', color='navy', label='Median (with NN)')
-    plt.plot(input_power_list, results[1][1], marker='s', color='red', label='Median (no NN)')
-
-    plt.title(f"Error vs Input Power - {num_users} UEs")
-    plt.xlabel("Input Power [dBm]")
-    plt.ylabel("Error [m]")
-    plt.grid(True)
-    plt.legend()
-    plt.tight_layout()
-    # Save to same folder as model_path
-    save_dir = os.path.dirname(model_path)
-    plt.savefig(os.path.join(save_dir, f"Median_error_vs_input_power_{num_users}UEs.png"))
-    plt.savefig(os.path.join("results", f"Median_error_vs_input_power_{num_users}UEs.png"))
-    plt.close()
+            print(" "*15+f"without our net {fc[band-1]//1000}G"+" "*15)
+        avg_errors, median_errors = sweep_input_power(model_path,num_users,input_power_list,band,no_NN,alg)
+        results[no_NN] = (avg_errors, median_errors)
+    plots_of_compare_SubSpaceNET_to_music_singal_band(results,input_power_list,num_users,model_path)
 
 
 
-def sweep_input_power_multi_band_multi_ue(num_users: int, input_power_list: list[float], model_path):
+def compare_MultiBandNet_to_music_singal_band(num_users: int, input_power_list: list[float], model_path, BS_num=1):
+    #compare the mse vs transmition power of our multi subband method to music with singal subband.
     assert num_users <= 3
-    torch.manual_seed(seed)
-    band_freq_file_in_k = 6
-    csv_file = rf"{RAYTRACING_DIR}/{band_freq_file_in_k}000/LOS_bs1_{band_freq_file_in_k}k_test.csv"
-    df = pd.read_csv(csv_file)
-    num_rows = len(df)
-
-    ue_indices = list(range(num_rows))
-    comb_indices = list(combinations(ue_indices, num_users))
-
     results = {}
 
     for band in [0, 1, 2, 3, 4]:
@@ -199,113 +121,100 @@ def sweep_input_power_multi_band_multi_ue(num_users: int, input_power_list: list
         # 3 for single band 18G with no net
         # 4 for single band 24G with no net
         if band == 0: 
-            model = Multi_Band_SubSpaceNET().to(DEVICE)
-            model.load_state_dict(torch.load(model_path, weights_only=True))
-            model.eval()
-            bands = None
+            no_NN = 0
+            alg = 'MUSIC'
             print("-"*40)
             print(" "*15+"using our net"+" "*15)
         else:
-            model = single_nurone().to(DEVICE)
-            bands = [get_bands_from_conf(fc, Nr, K, BW)[band - 1]]
+            no_NN = 1 
+            alg = 'MUSIC'
             print("-"*40)
-            print(" "*15+f"without our net {band}"+" "*15)
-
-        avg_errors = []
-        median_errors = []
-
-        for input_power in input_power_list:
-            total_error = 0
-            valid_comb_count = 0
-            error_list = []
-            temp_ue_row = 0
-            problematic_locs = []
-
-            for comb in comb_indices:
-                if num_users > 2:
-                    if temp_ue_row % 10 != 0:
-                        temp_ue_row += 1
-                        continue
-                    temp_ue_row += 1
-                ue_locs = []
-                for row in comb:
-                    ue_info = get_ue_info_by_row(csv_file, row)
-                    ue_locs.append(ue_info['ue_loc'])
-                ue_locs_array = np.array(ue_locs)
-                if too_close(ue_locs_array,50): continue
-                error = test_1sample(model, ue_locs_array, input_power=input_power, toPrint=False, bands=bands)
-                total_error += error
-                error_list.append(error)
-                valid_comb_count += 1
-                if input_power == 10 and error > 70: problematic_locs.append(ue_locs)
-
-            avg_error = total_error / valid_comb_count
-            avg_errors.append(avg_error)
-            median_errors.append(np.median(error_list))
-            print("-"*40)
-            print(f"input power:{input_power}[dBm]")
-            print(f"Total {valid_comb_count} {num_users}-UE combinations tested.")
-            print(f"AVG error dist: {avg_error:.3f} [m]")
-            print(f"median error:{median_errors[-1]:.3f}[m]")
-            print(problematic_locs)
-            
-
-        results[band] = (avg_errors, median_errors)
-
-      
-        
-
+            print(" "*15+f"without our net {fc[band-1]//1000}G"+" "*15)
+        avg_errors, median_errors = sweep_input_power(model_path,num_users,input_power_list,band,no_NN,alg, BS_num=BS_num)
+        results[band] = (avg_errors, median_errors) 
     # Plot
-    plt.figure(figsize=(8, 5))
-    plt.plot(input_power_list, results[4][0], marker='o', color='yellow', label='Avg 24GHz (no NN)')
-    plt.plot(input_power_list, results[3][0], marker='o', color='blue', label='Avg 18GHz (no NN)')
-    plt.plot(input_power_list, results[2][0], marker='o', color='green', label='Avg 12GHz (no NN)')
-    plt.plot(input_power_list, results[1][0], marker='o', color='orange', label='Avg 6GHz (no NN)')
-    plt.plot(input_power_list, results[0][0], marker='o', color='red', label='Avg multiband (with NN)')
-    
-    plt.title(f"Error vs Input Power - {num_users} UEs")
-    plt.xlabel("Input Power [dBm]")
-    plt.ylabel("Error [m]")
-    plt.grid(True)
-    plt.legend()
-    plt.yscale('log')
-    plt.tight_layout()
-    # Save to same folder as model_path
-    save_dir = os.path.dirname(model_path)
-    plt.savefig(os.path.join(save_dir, f"Avg_error_vs_input_power_{num_users}UEs.png"))
-    plt.savefig(os.path.join("results", f"Avg_error_vs_input_power_{num_users}UEs.png"))
-    plt.close()
-    
-    plt.figure(figsize=(8, 5))
-    plt.plot(input_power_list, results[4][1], marker='s', color='yellow', label='Median 24GHz (no NN)')
-    plt.plot(input_power_list, results[3][1], marker='s', color='blue', label='Median 18GHz (no NN)')
-    plt.plot(input_power_list, results[2][1], marker='s', color='green', label='Median 12GHz (no NN)')
-    plt.plot(input_power_list, results[1][1], marker='s', color='orange', label='Median 6GHz (no NN)')
-    plt.plot(input_power_list, results[0][1], marker='s', color='red', label='Median multiband (with NN)')
-    
-    
-
-    plt.title(f"Error vs Input Power - {num_users} UEs")
-    plt.xlabel("Input Power [dBm]")
-    plt.ylabel("Error [m]")
-    plt.grid(True)
-    plt.legend()
-    plt.tight_layout()
-    plt.yscale('log')
-    # Save to same folder as model_path
-    save_dir = os.path.dirname(model_path)
-    plt.savefig(os.path.join(save_dir, f"Median_error_vs_input_power_{num_users}UEs.png"))
-    plt.savefig(os.path.join("results", f"Median_error_vs_input_power_{num_users}UEs.png"))
-    plt.close()
+    plots_of_MultiBandNet_to_music_singal_band(results,input_power_list,num_users,model_path)
 
 
-def test_1sample(model, ues_pos, toPlot=False, toPrint=True, name=None,zoom = False, input_power=None, bands=None):
+def sweep_input_power(model_path,num_users,input_power_list,band,no_NN,alg, BS_num=1):
+    #for a given method compute mse vs transmition power 
+    # band = 0 for multiband!!!! 
+    # band = 1 for single band 6G ,band = 2 for single band 12G ,band = 3 for 18G, band = 4 for 24G
+    torch.manual_seed(seed) 
+    if band == 0: 
+        model = Multi_Band_SubSpaceNET().to(DEVICE)
+        model.load_state_dict(torch.load(model_path, weights_only=True))
+        bands = None
+    else:
+        if not no_NN:
+            model = SubSpaceNET(band=band).to(DEVICE)
+            model.load_state_dict(torch.load(model_path, weights_only=True))
+        else:    
+            model = single_nurone().to(DEVICE)      
+        bands = [get_bands_from_conf(fc, Nr, K, BW)[band - 1]]
+
+        ####
+    model.eval()
+    band_freq_file_in_G = 6
+    csv_file = rf"{ALLBSs_DIR}/bs_{BS_num}/test_{band_freq_file_in_G}Ghz.csv"
+    df = pd.read_csv(csv_file)
+    num_rows = len(df)
+        ####
+    
+    ue_indices = list(range(num_rows))
+    comb_indices = list(combinations(ue_indices, num_users))
+
+    avg_errors = []
+    median_errors = []
+
+    for input_power in input_power_list:
+        total_error = 0
+        valid_comb_count = 0
+        error_list = []
+        temp_ue_row = 0
+        problematic_locs = []
+
+        for comb in comb_indices:
+            if num_users > 2:
+                if temp_ue_row % 10 != 0:
+                    temp_ue_row += 1
+                    continue
+                temp_ue_row += 1
+            ue_locs = []
+            for row in comb:
+                ue_info = get_ue_info_by_row(csv_file, row)
+                ue_locs.append(ue_info['ue_loc'][:2])
+            ue_locs_array = np.array(ue_locs)
+            if too_close(ue_locs_array,50): continue
+            error = test_1sample(model, ue_locs_array, input_power=input_power, toPrint=False, bands=bands,alg=alg, BS_num=BS_num)
+            total_error += error
+            error_list.append(error)
+            valid_comb_count += 1
+            if error > 70: problematic_locs.append(ue_locs)
+
+        avg_error = total_error / valid_comb_count
+        avg_errors.append(avg_error)
+        median_errors.append(np.median(error_list))
+        print("-"*40)
+        print(f"input power:{input_power}[dBm]")
+        print(f"Total {valid_comb_count} {num_users}-UE combinations tested.")
+        print(f"AVG error dist: {avg_error:.3f} [m]")
+        print(f"median error:{median_errors[-1]:.3f}[m]")
+        print(f"{len(problematic_locs)} examples with error greater then 70[m]:{problematic_locs[:min(len(problematic_locs),20)]}")
+    return avg_errors, median_errors        
+
+
+
+
+
+
+
+def test_1sample(model, ues_pos, toPlot=False, toPrint=True, name=None,zoom = False, input_power=None, bands=None,alg=alg, BS_num=1):
     if not name:
-        name = fr"results/test {list(ues_pos)}.png"
+        name = fr"results/test {[list(ue) for ue in ues_pos]}.png"
     """---------------------------------- CONFIG ---------------------------------------------"""
     # System parameters
     num_of_ues = len(ues_pos)
-    bs_pos = np.array([280.863,473.291])
     '''----------------------------------------------------------------------------------------'''
     # random seed for run
     torch.manual_seed(seed)
@@ -321,7 +230,7 @@ def test_1sample(model, ues_pos, toPlot=False, toPrint=True, name=None,zoom = Fa
     # for each frequency sub-band
     for j, band in enumerate(bands):
         # generate the channel
-        y, data = get_channel(ues_pos, band, input_power)
+        y, data = get_channel(ues_pos, band,BS_num=BS_num, input_power=input_power)
         per_band_y.append(y)
         per_band_data.append(data)
     multiband = "MULTI" if len(per_band_y) > 1 else "SINGLE"
@@ -337,8 +246,9 @@ def test_1sample(model, ues_pos, toPlot=False, toPrint=True, name=None,zoom = Fa
         true_aoas.append(ue_data['aoa'][0])
         true_toas.append(ue_data['toa'][0])
         AOA, TOA = estimations[0, ue_indx, :]
+        bs_pos = np.array(ue_data['bs_loc'][:2])
         c = 299.792
-        h = 95
+        h = ue_data['bs_loc'][2] - ue_data['ue_loc'][2]
         r = np.sqrt((TOA * c) ** 2 - h ** 2) if TOA * c > h else 0
         est_pos = bs_pos + r * np.array([np.sin(np.deg2rad(AOA)), -np.cos(np.deg2rad(AOA))])
         estimated_positions.append(est_pos)
@@ -370,6 +280,7 @@ def test_1sample(model, ues_pos, toPlot=False, toPrint=True, name=None,zoom = Fa
 
 if __name__ == "__main__":
     print("running...")
+    BS_num = 1
     num_ue = 1
     bands = get_bands_from_conf(fc, Nr, K, BW)
     no_sweep = 0 # sweep snr - 0 / one snr - 1
@@ -377,7 +288,8 @@ if __name__ == "__main__":
         test_multi_ue(bands[0], num_ue,model_path)
     elif no_sweep == 0:
         input_power_values = [-5, 0, 5, 10]
-        sweep_input_power_multi_band_multi_ue(num_ue, input_power_values,model_path)
+        compare_MultiBandNet_to_music_singal_band(num_ue, input_power_values,model_path,BS_num = BS_num)
     else:
         print("only 0/1")
+       
     

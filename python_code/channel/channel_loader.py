@@ -4,7 +4,7 @@ import time
 
 from utils.bands_manipulation import Band, get_bands_from_conf
 from exp_params import K, Nr, fc, BW, input_power
-from dir_definitions import RAYTRACING_DIR
+from dir_definitions import RAYTRACING_DIR, ALLBSs_DIR
 
 '''
     לבדוק:
@@ -56,7 +56,8 @@ def get_ue_info_by_row(csv_filename: str, row_num: int):
 
     return {
         "row_num": row_num,
-        "ue_loc": [int(row['rx_x']), int(row['rx_y'])],
+        "bs_loc": [int(row['tx_x']), int(row['tx_y']), int(row['tx_z'])],
+        "ue_loc": [int(row['rx_x']), int(row['rx_y']), int(row['rx_z'])],
         "n_path": n_path,
         "powers": powers,
         "toa": toa,
@@ -85,7 +86,8 @@ def get_ues_info(csv_filename: str, ue_locs: list, sweeped_power=None):
             aoa = [row[f'aod_{i}'] + 90 for i in range(1, n_path + 1) if f'aod_{i}' in row]
 
             results.append({
-                "ue_loc": ue_loc,
+                "bs_loc": [int(row['tx_x']), int(row['tx_y']), int(row['tx_z'])],
+                "ue_loc": [int(row['rx_x']), int(row['rx_y']), int(row['rx_z'])],
                 "n_path": n_path,
                 "powers": powers,
                 "toa": toa,
@@ -95,19 +97,10 @@ def get_ues_info(csv_filename: str, ue_locs: list, sweeped_power=None):
     return results
 
 
-def generate_batches(band: Band, batch_size: int, ues_num: int, state="train"):
-    band_freq_file_in_k = int(band.fc / 1000)
-    csv_filename = rf"{RAYTRACING_DIR}/{band_freq_file_in_k}000/LOS_bs1_{band_freq_file_in_k}k_{state}.csv"
 
-    batch = []
-    for _ in range(batch_size):
-        batch.append(sample_random_ues(csv_filename, ues_num))
-    return batch
-
-
-def generate_batches_by_rows(band: Band, csv_rows_per_sample, state="train"):
-    band_freq_file_in_k = int(band.fc / 1000)
-    csv_filename = rf"{RAYTRACING_DIR}/{band_freq_file_in_k}000/LOS_bs1_{band_freq_file_in_k}k_{state}.csv"
+def generate_batches_by_rows(band: Band, csv_rows_per_sample, BS_num, state="train"):
+    band_freq_file_in_G = int(band.fc / 1000)
+    csv_filename = rf"{ALLBSs_DIR}/bs_{BS_num}/{state}_{band_freq_file_in_G}Ghz.csv"
 
     batch = []
     for sample in csv_rows_per_sample:
@@ -117,25 +110,3 @@ def generate_batches_by_rows(band: Band, csv_rows_per_sample, state="train"):
         batch.append(results)
     return batch
 
-
-# Example usage
-if __name__ == "__main__":
-    bands = get_bands_from_conf(fc, Nr, K, BW)
-    band = bands[0]
-
-    batch_size = 10  # Number of batches
-    ues_num = 3  # Number of samples per batch
-
-    start = time.time()
-    batches = generate_batches(band, batch_size, ues_num)
-    end = time.time()
-    print("-" * 40)
-    print(f"time for {batch_size} batches of {ues_num} ues : ", end - start)
-    print("-" * 40)
-
-    # Print batch results
-    for i, batch in enumerate(batches):
-        print(f"Batch {i + 1}:")
-        for data in batch:
-            print(data)
-        print("-" * 40)

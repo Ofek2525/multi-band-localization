@@ -8,3 +8,4 @@ RESULTS_DIR = os.path.join(ROOT_DIR, 'results')
 
 # subfolders
 RAYTRACING_DIR = os.path.join(RESOURCES_DIR, 'raytracing')
+ALLBSs_DIR = os.path.join(RESOURCES_DIR, 'all_BSs')

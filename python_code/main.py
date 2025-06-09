@@ -8,20 +8,20 @@ from plotting.map_plot import plot_angle_time
 from test import test_1sample
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-model_path = r"z_exp/2025-05-11_01:36#multiband#ues=2,k=[20, 20, 20, 20],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[4, 4, 4, 4],NS=50,input_power=3dBm/model_prams.pth"
+BS_num =7
+model_path = r"z_exp/2025-06-04_17:24#deffrent_postprocess#ues=2,k=[20, 20, 20, 20],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[4, 4, 4, 4],NS=50,input_power=10dBm/model_params.pth"
 no_nn = 0
 def main():
 
     # for cases when exp_parans are multiband:
-    main_band = 1
+    main_band = 4
     # 1 for single band 6G with no net
     # 2 for single band 12G with no net
     # 3 for single band 18G with no net
     # 4 for single band 24G with no net
 
     bands = None
-    ues_pos = np.array([[240,370]])#[245, 355]#[160, 215]#[100,90]#[240,370]#[120,125]#[50,15]  # transmitter UE position    
+    ues_pos = np.array([[95, 315]])#[245, 355]#[160, 215]#[100,90]#[240,370]#[120,125]#[50,15]  # transmitter UE position    
     if no_nn == 0:
         if len(fc) == 1:
             model = SubSpaceNET().to(DEVICE)
@@ -47,7 +47,7 @@ def main():
         model = single_nurone().to(DEVICE)
         if len(fc) != 1:
             bands = [get_bands_from_conf(fc, Nr, K, BW)[main_band - 1]]
-    test_1sample(model, ues_pos, toPlot=True,name=r"results/AOA_and_delay_est.png",zoom =False, bands=bands)
+    test_1sample(model, ues_pos, toPlot=True,name=r"results/AOA_and_delay_est.png",zoom =False, bands=bands,BS_num =BS_num)
 
 
 if __name__ == "__main__":

@@ -1,19 +1,20 @@
 
 import torch
 import torch.optim as optim
+import pandas as pd
 import numpy as np
 #from python_code import DEVICE
 from estimation.net import SubSpaceNET
 from estimation.multiband_net import Multi_Band_SubSpaceNET, Init_Single_Band_SubSpaceNET, Encoder_6k, Encoder_12k, Encoder_18k, Encoder_24k, Decoder
 from estimation.loss import music_loss
 from estimation.estimate import single_band_autocorrection
-from channel.generate_channel import random_pos_ues_channel, ues_rows_channel
-from exp_params import seed, K, Nr, fc, BW,NS,input_power, main_band_idx
+from channel.generate_channel import ues_rows_channel
+from exp_params import seed, K, Nr, fc, BW,NS,input_power, main_band_idx, num_of_BSs
 from utils.bands_manipulation import get_bands_from_conf
 from utils.learning_rate_schedule import lr_schedule
 from test import test_1sample
 from channel.channel_loader import get_ue_info_by_row
-from dir_definitions import RAYTRACING_DIR
+from dir_definitions import RAYTRACING_DIR, ALLBSs_DIR
 from utils.check_if_close import too_close
 from plotting.learning_plot import plot_validation
 import shutil
@@ -24,7 +25,7 @@ import random
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-experment_name = "deffrent_postprocess"
+experment_name = "multi_bs"
 load_path =r""
 #learning_rate=0.0001/4
 def train(learning_rate=15e-04, batch_size=20, data_samples=200000, ues_num=2, step=2000, alpha = 0.5, experment_name = "", load_path =""):
@@ -42,19 +43,7 @@ def train(learning_rate=15e-04, batch_size=20, data_samples=200000, ues_num=2, s
         model = SubSpaceNET().to(DEVICE)
         shutil.copyfile(r"python_code/estimation/net.py", fr"{experment_dir}/net.py")
     elif len(fc) == 4:
-        encoder_6k = Encoder_6k()
-        encoder_12k = Encoder_12k()
-        encoder_18k = Encoder_18k()
-        encoder_24k = Encoder_24k()
-        decoder = Decoder()
-
-        model = Multi_Band_SubSpaceNET(
-            encoder_6k=encoder_6k,
-            encoder_12k=encoder_12k,
-            encoder_18k=encoder_18k,
-            encoder_24k=encoder_24k,
-            decoder=decoder
-        ).to(DEVICE)
+        model = Multi_Band_SubSpaceNET().to(DEVICE)
         shutil.copyfile(r"python_code/estimation/multiband_net.py", fr"{experment_dir}/multiband_net.py")
     else:
         print("error with params")
@@ -74,11 +63,22 @@ def train(learning_rate=15e-04, batch_size=20, data_samples=200000, ues_num=2, s
         lr_schedule(optimizer,batch_num,step,alpha)
         # get data
         per_band_y, per_band_data = [], []
-        csv_rows_per_sample = [random.sample(range(1, 345), ues_num) for _ in range(batch_size)]
+        BS_num = random.randint(1, num_of_BSs)
+            ##### only for df len:
+        band_freq_file_in_G = int(main_band.fc / 1000)
+        csv_filename = rf"{ALLBSs_DIR}/bs_{BS_num}/train_{band_freq_file_in_G}Ghz.csv"
+        df = pd.read_csv(csv_filename)
+        num_rows = len(df)
+            #####
+        try:
+            csv_rows_per_sample = [random.sample(range(1, num_rows), ues_num) for _ in range(batch_size)]
+        except:
+            print("##############", BS_num)
+            continue
         # for each frequency sub-band
         for band in bands:
             # generate the channel
-            ys, ues_data = ues_rows_channel(band, batch_size, tmp_ues_num, csv_rows_per_sample, state="train")
+            ys, ues_data = ues_rows_channel(band, batch_size, tmp_ues_num, csv_rows_per_sample, BS_num=BS_num, state="train")
             per_band_y.append(ys)
             per_band_data.append(ues_data)
         
@@ -108,16 +108,15 @@ def train(learning_rate=15e-04, batch_size=20, data_samples=200000, ues_num=2, s
             print("saved")
         if batch_num % 40 == 0:
             model.eval()
-            mean_distance = test_1sample(model,np.array([[100, 115],[255, 365], [200, 270]]), toPlot=True) /5
-            mean_distance += test_1sample(model,np.array([[245, 375],[75, 75], [185, 255]]), toPlot=True)/5
-            mean_distance += test_1sample(model,np.array([[130, 135], [235, 360], [75, 75]]), toPlot=True)/5
-            mean_distance += test_1sample(model,np.array([[140, 160], [185, 255], [50, 20]]), toPlot=True)/5
-            mean_distance += test_1sample(model,np.array([[125, 155], [245, 375], [200, 270]]), toPlot=True)/5
+            mean_distance = test_1sample(model,np.array([[75, 75],[140,175]]), toPlot=True) /5
+            mean_distance += test_1sample(model,np.array([[190,245],[75, 75]]), toPlot=True)/5
+            mean_distance += test_1sample(model,np.array([[215,315], [320,430]]), toPlot=True)/5
+            mean_distance += test_1sample(model,np.array([[215,315], [235,335]]), toPlot=True)/5
+            mean_distance += test_1sample(model,np.array([[150,165], [170,205]]), toPlot=True)/5
             error_list.append(mean_distance)
             plot_validation(error_list,experment_dir)
             print(f"mean error ={mean_distance}") 
-            test_1sample(model,np.array([[245, 375],[75, 75]]), toPlot=True)
-            test_1sample(model,np.array([[50, 20]]), toPlot=True)
+            test_1sample(model,np.array([[40, 5]]), toPlot=True)
             model.train()
     torch.save(model.state_dict(), fr"{experment_dir}/model_params.pth")
     return model

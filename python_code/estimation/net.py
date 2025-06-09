@@ -4,8 +4,9 @@ from exp_params import K, Nr, main_band_idx
 #from python_code import DEVICE
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 class SubSpaceNET(nn.Module):
-    def __init__(self, psd_epsilon: float=0.1):
+    def __init__(self, psd_epsilon: float=0.1,band =1):
         super(SubSpaceNET, self).__init__()
+        self.band = band
         self.p1 = 0.2
         self.p2 = 0.2
         self.psd_epsilon = psd_epsilon
@@ -38,11 +39,11 @@ class SubSpaceNET(nn.Module):
         x = x.type(torch.float)
     
         ''' Architecture flow '''
-        y = reorder(x,Nr[0],K[0]) # Shape: [Batch size,2, N, N]
+        y = reorder(x,Nr[self.band -1],K[self.band-1]) # Shape: [Batch size,2, N, N]
         y = self.yconv(y) # Shape: [Batch size,4, N-1, N-1]
         y = self.antirectifier(y) # Shape: [Batch size,8, N-1, N-1]
         y = self.ydeconv(y) # Shape: [Batch size,8, N, N]
-        y = order_back(y,Nr[0],K[0])
+        y = order_back(y,Nr[self.band-1],K[self.band-1])
 
         x = self.xconv(x) # Shape: [Batch size,4, N-1, N-1]
         x = self.antirectifier(x) # Shape: [Batch size,8, N-1, N-1]

@@ -3,26 +3,27 @@ import torch
 
 from exp_params import NS
 from utils.basis_functions import compute_angle_options,compute_time_options
-from dir_definitions import RAYTRACING_DIR
-from channel.channel_loader import generate_batches, get_ues_info, generate_batches_by_rows
+from dir_definitions import RAYTRACING_DIR, ALLBSs_DIR
+from channel.channel_loader import get_ues_info, generate_batches_by_rows
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-def get_channel(ues_loc, band, input_power=None):
+def get_channel(ues_loc, band, BS_num=1, input_power=None, state="test"):
     """
     :param ues_loc: [ue_num_simultaneously X 2]
     :param band:
     :return: bs=bs_loc, y=y -> [butch X Nr X K X T], TOA=toas, AOA=aoas, band=band
     """
-    band_freq_file_in_k = int(band.fc / 1000)
-    csv_filename = rf"{RAYTRACING_DIR}/{band_freq_file_in_k}000/LOS_bs1_{band_freq_file_in_k}k.csv"
+    band_freq_file_in_G = int(band.fc / 1000)
+    csv_filename = rf"{ALLBSs_DIR}/bs_{BS_num}/{state}_{band_freq_file_in_G}Ghz.csv"
 
     ues_data = get_ues_info(csv_filename, ues_loc, input_power)
     y = sum([single_ue_channel(ue_data, band) for ue_data in ues_data]).unsqueeze(0)
     return y, ues_data
 
 
-def random_pos_ues_channel(band, batch_size, ues_num, state="train"):
+
+def ues_rows_channel(band, batch_size, ues_num, csv_rows_per_sample, BS_num=1, state="train"):
     """
     :param band:
     :param batch_size:
@@ -30,7 +31,7 @@ def random_pos_ues_channel(band, batch_size, ues_num, state="train"):
     :return:ys,ues_data
     """
 
-    ues_data = generate_batches(band, batch_size, ues_num, state)
+    ues_data = generate_batches_by_rows(band, csv_rows_per_sample, BS_num, state)
     ys = []
     for i in range(batch_size):
         ys.append(sum(single_ue_channel(ues_data[i][ue],band) for ue in range(ues_num)))
@@ -38,23 +39,7 @@ def random_pos_ues_channel(band, batch_size, ues_num, state="train"):
     return ys, ues_data
 
 
-def ues_rows_channel(band, batch_size, ues_num, csv_rows_per_sample, state="train"):
-    """
-    :param band:
-    :param batch_size:
-    :param ues_num:  number of ues simultaneously
-    :return:ys,ues_data
-    """
-
-    ues_data = generate_batches_by_rows(band, csv_rows_per_sample, state)
-    ys = []
-    for i in range(batch_size):
-        ys.append(sum(single_ue_channel(ues_data[i][ue],band) for ue in range(ues_num)))
-    ys = torch.stack(ys, dim=0)
-    return ys, ues_data
-
-
-def single_ue_channel(ue_data,band):
+def single_ue_channel(ue_data, band):
     """
     :param ue_data: dictionaire with keys: ue_loc, n_path, powers, toa, aoa
     :param band:
