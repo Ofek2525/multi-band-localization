@@ -8,7 +8,7 @@ from test import sweep_input_power
 from plotting.tests_plot import plots_of_compare_MultiBandNet_to_MultiBeamformer
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-model_path = r"z_exp/2025-05-24_23:56#deffrent_postprocess#ues=2,k=[20, 20, 20, 20],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[4, 4, 4, 4],NS=50,input_power=10dBm/model_params.pth"
+model_path = r"z_exp/2025-06-10_18:02#multi_bs_1ue#ues=2,k=[20, 20, 20, 20],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[4, 4, 4, 4],NS=50,input_power=5dBm/model_params.pth"
 
 
 def compare_MultiBandNet_to_MultiBeamformer(input_power_list: list[float], model_path):

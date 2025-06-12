@@ -6,7 +6,7 @@ fc =[6000, 12000, 18000, 24000] #[24000]  # [6000, 12000, 18000, 24000]  # carri
 BW = [4,4,4,4]#[12/5]  # [6, 12, 24, 48]  # BW frequency in MHz
 main_band_idx = 2
 
-input_power = 5 #3 dBm
+input_power = 10 #3 dBm
 NS = 50
 num_of_BSs = 15
 

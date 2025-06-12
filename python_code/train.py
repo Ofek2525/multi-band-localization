@@ -25,10 +25,10 @@ import random
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-experment_name = "multi_bs"
+experment_name = "skip_bs1"
 load_path =r""
 #learning_rate=0.0001/4
-def train(learning_rate=15e-04, batch_size=20, data_samples=200000, ues_num=2, step=2000, alpha = 0.5, experment_name = "", load_path =""):
+def train(learning_rate=5e-04, batch_size=20, data_samples=200000, ues_num=2, step=2000, alpha = 0.5,all_BS = 0, experment_name = "", load_path =""):
    
     #create experment dir
     date = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M")
@@ -56,14 +56,14 @@ def train(learning_rate=15e-04, batch_size=20, data_samples=200000, ues_num=2, s
     error_list = []
 
     main_band = bands[0] if len(fc) == 1 else bands[main_band_idx]
-
+    BS_num = 1
     # Training loop
     for batch_num in range(data_samples // batch_size):
         tmp_ues_num = np.random.choice([1,ues_num], p=[0,1])
         lr_schedule(optimizer,batch_num,step,alpha)
         # get data
         per_band_y, per_band_data = [], []
-        BS_num = random.randint(1, num_of_BSs)
+        if all_BS: BS_num = random.randint(1, num_of_BSs) 
             ##### only for df len:
         band_freq_file_in_G = int(main_band.fc / 1000)
         csv_filename = rf"{ALLBSs_DIR}/bs_{BS_num}/train_{band_freq_file_in_G}Ghz.csv"

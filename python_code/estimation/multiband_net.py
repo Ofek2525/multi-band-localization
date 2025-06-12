@@ -9,19 +9,10 @@ DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 class Encoder_6k(nn.Module):
     def __init__(self):
         super(Encoder_6k, self).__init__()
-        self.p = 0.3
-
-        self.yconv = nn.Conv2d(2, 4, kernel_size=2,stride=1)
-        self.xconv = nn.Conv2d(2, 4, kernel_size=2,stride=1)
-
-        self.ydeconv = nn.ConvTranspose2d(8, 8, kernel_size=2,stride=1)
-        self.xdeconv = nn.ConvTranspose2d(8, 8, kernel_size=2,stride=1)        
-
+        self.two_orders = two_orders_block(Nr[0],K[0])     
         self.conv1 = nn.Conv2d(32, 16, kernel_size=2,stride=2)
-      
         self.antirectifier = AntiRectifier()
-        self.relu = nn.ReLU()
-        self.DropOut = nn.Dropout(self.p)
+       
 
     def forward(self, x: torch.Tensor):
         ''''''
@@ -31,18 +22,7 @@ class Encoder_6k(nn.Module):
         x = torch.cat((torch.real(x), torch.imag(x)), dim=1)  # Shape: [Batch size,2, N, N]
         x = x.type(torch.float) 
         ''' Architecture flow '''
-        y = reorder(x,Nr[0],K[0]) # Shape: [Batch size,2, N, N]
-        y = self.yconv(y) # Shape: [Batch size,4, N-1, N-1]
-        y = self.antirectifier(y) # Shape: [Batch size,8, N-1, N-1]
-        y = self.ydeconv(y) # Shape: [Batch size,8, N, N]
-        y = order_back(y,Nr[0],K[0])
-
-        x = self.xconv(x) # Shape: [Batch size,4, N-1, N-1]
-        x = self.antirectifier(x) # Shape: [Batch size,8, N-1, N-1]
-        x = self.xdeconv(x) # Shape: [Batch size,8, N, N]
-
-        x = torch.cat((x, y), dim=1)# Shape: [Batch size,16, N, N]
-        x = self.DropOut(x)
+        x = self.two_orders(x) #[Batch size,16, N, N]
         x = self.antirectifier(x) # Shape: [Batch size,32, N, N]
         
         # CNN block #1
@@ -55,21 +35,13 @@ class Encoder_6k(nn.Module):
 class Encoder_12k(nn.Module):
     def __init__(self):
         super(Encoder_12k, self).__init__()
-        self.p = 0.3
-
-        self.yconv = nn.Conv2d(2, 4, kernel_size=2,stride=1)
-        self.xconv = nn.Conv2d(2, 4, kernel_size=2,stride=1)
-
-        self.ydeconv = nn.ConvTranspose2d(8, 8, kernel_size=2,stride=1)
-        self.xdeconv = nn.ConvTranspose2d(8, 8, kernel_size=2,stride=1)        
+        self.two_orders = two_orders_block(Nr[1],K[1])
 
         self.conv1 = nn.Conv2d(32, 16, kernel_size=2,stride=2)
         self.conv2 = nn.Conv2d(32, 32, kernel_size=2,stride=2)
        
-
         self.antirectifier = AntiRectifier()
-        self.relu = nn.ReLU()
-        self.DropOut = nn.Dropout(self.p)
+       
 
     def forward(self, x: torch.Tensor):
         ''''''
@@ -80,18 +52,7 @@ class Encoder_12k(nn.Module):
         x = x.type(torch.float)
     
         ''' Architecture flow '''
-        y = reorder(x,Nr[1],K[1]) # Shape: [Batch size,2, N, N]
-        y = self.yconv(y) # Shape: [Batch size,4, N-1, N-1]
-        y = self.antirectifier(y) # Shape: [Batch size,8, N-1, N-1]
-        y = self.ydeconv(y) # Shape: [Batch size,8, N, N]
-        y = order_back(y,Nr[1],K[1])
-
-        x = self.xconv(x) # Shape: [Batch size,4, N-1, N-1]
-        x = self.antirectifier(x) # Shape: [Batch size,8, N-1, N-1]
-        x = self.xdeconv(x) # Shape: [Batch size,8, N, N]
-
-        x = torch.cat((x, y), dim=1)# Shape: [Batch size,16, N, N]
-        x = self.DropOut(x)
+        x = self.two_orders(x) #[Batch size,16, N, N]
         x = self.antirectifier(x) # Shape: [Batch size,32, N, N]
         
         # CNN block #1
@@ -107,21 +68,13 @@ class Encoder_12k(nn.Module):
 class Encoder_18k(nn.Module):
     def __init__(self):
         super(Encoder_18k, self).__init__()
-        self.p = 0.3
-
-        self.yconv = nn.Conv2d(2, 4, kernel_size=2,stride=1)
-        self.xconv = nn.Conv2d(2, 4, kernel_size=2,stride=1)
-
-        self.ydeconv = nn.ConvTranspose2d(8, 8, kernel_size=2,stride=1)
-        self.xdeconv = nn.ConvTranspose2d(8, 8, kernel_size=2,stride=1)        
+        self.two_orders = two_orders_block(Nr[2],K[2])     
 
         self.conv1 = nn.Conv2d(32, 16, kernel_size=2,stride=2)
         self.conv2 = nn.Conv2d(32, 32, kernel_size=2,stride=2)
         self.conv3 = nn.Conv2d(64, 64, kernel_size=2,stride=2)
 
         self.antirectifier = AntiRectifier()
-        self.relu = nn.ReLU()
-        self.DropOut = nn.Dropout(self.p)
 
     def forward(self, x: torch.Tensor):
         ''''''
@@ -132,28 +85,17 @@ class Encoder_18k(nn.Module):
         x = x.type(torch.float)
     
         ''' Architecture flow '''
-        y = reorder(x,Nr[2],K[2]) # Shape: [Batch size,2, N, N]
-        y = self.yconv(y) # Shape: [Batch size,4, N-1, N-1]
-        y = self.antirectifier(y) # Shape: [Batch size,8, N-1, N-1]
-        y = self.ydeconv(y) # Shape: [Batch size,8, N, N]
-        y = order_back(y,Nr[2],K[2])
-
-        x = self.xconv(x) # Shape: [Batch size,4, N-1, N-1]
-        x = self.antirectifier(x) # Shape: [Batch size,8, N-1, N-1]
-        x = self.xdeconv(x) # Shape: [Batch size,8, N, N]
-
-        x = torch.cat((x, y), dim=1)# Shape: [Batch size,16, N, N]
-        x = self.DropOut(x)
+        x = self.two_orders(x)# Shape: [Batch size,16, N, N]
         x = self.antirectifier(x) # Shape: [Batch size,32, N, N]
         
         # CNN block #1
         x = self.conv1(x)  # Shape: [Batch size, 32, N/2, N/2]
-        x_skip = self.antirectifier(x)  # Shape: [Batch size, 32, 
+        x = self.antirectifier(x)  # Shape: [Batch size, 32, 
         # CNN block #2
-        x = self.conv2(x_skip)  # Shape: [Batch size, 32,
-        x = self.antirectifier(x)  # Shape: [Batch size, 64, 
+        x = self.conv2(x)  # Shape: [Batch size, 32,
+        x_skip = self.antirectifier(x)  # Shape: [Batch size, 64, 
         # CNN block #3
-        x = self.conv3(x)  # Shape: [Batch size, 64, 
+        x = self.conv3(x_skip)  # Shape: [Batch size, 64, 
         x = self.antirectifier(x)  # Shape: [Batch size, 128, N/8, N/8]
         return x, x_skip
 
@@ -161,14 +103,8 @@ class Encoder_18k(nn.Module):
 # Encoder 24k
 class Encoder_24k(nn.Module):
     def __init__(self):
-        super(Encoder_24k, self).__init__()
-        self.p = 0.3
-
-        self.yconv = nn.Conv2d(2, 4, kernel_size=2,stride=1)
-        self.xconv = nn.Conv2d(2, 4, kernel_size=2,stride=1)
-
-        self.ydeconv = nn.ConvTranspose2d(8, 8, kernel_size=2,stride=1)
-        self.xdeconv = nn.ConvTranspose2d(8, 8, kernel_size=2,stride=1)        
+        super(Encoder_24k, self).__init__()       
+        self.two_orders = two_orders_block(Nr[3],K[3])
 
         self.conv1 = nn.Conv2d(32, 16, kernel_size=2,stride=2)
         self.conv2 = nn.Conv2d(32, 32, kernel_size=2,stride=2)
@@ -177,7 +113,6 @@ class Encoder_24k(nn.Module):
 
         self.antirectifier = AntiRectifier()
         self.relu = nn.ReLU()
-        self.DropOut = nn.Dropout(self.p)
 
     def forward(self, x: torch.Tensor):
         ''''''
@@ -188,31 +123,20 @@ class Encoder_24k(nn.Module):
         x = x.type(torch.float)
     
         ''' Architecture flow '''
-        y = reorder(x,Nr[3],K[3]) # Shape: [Batch size,2, N, N]
-        y = self.yconv(y) # Shape: [Batch size,4, N-1, N-1]
-        y = self.antirectifier(y) # Shape: [Batch size,8, N-1, N-1]
-        y = self.ydeconv(y) # Shape: [Batch size,8, N, N]
-        y = order_back(y,Nr[3],K[3])
-
-        x = self.xconv(x) # Shape: [Batch size,4, N-1, N-1]
-        x = self.antirectifier(x) # Shape: [Batch size,8, N-1, N-1]
-        x = self.xdeconv(x) # Shape: [Batch size,8, N, N]
-
-        x = torch.cat((x, y), dim=1)# Shape: [Batch size,16, N, N]
-        x = self.DropOut(x)
+        x = self.two_orders(x) # Shape: [Batch size,16, N, N]
         x = self.antirectifier(x) # Shape: [Batch size,32, N, N]
         
         # CNN block #1
         x = self.conv1(x)  # Shape: [Batch size, 32, N-1, N-1]
-        x_skip = self.antirectifier(x)  # Shape: [Batch size, 32, 2N-1, N-1]
+        x = self.antirectifier(x)  # Shape: [Batch size, 32, 2N-1, N-1]
         # CNN block #2
-        x = self.conv2(x_skip)  # Shape: [Batch size, 32, 2N-2, N-2]
+        x = self.conv2(x)  # Shape: [Batch size, 32, 2N-2, N-2]
         x = self.antirectifier(x)  # Shape: [Batch size, 64, 2N-2, N-2]
         # CNN block #3
         x = self.conv3(x)  # Shape: [Batch size, 64, 
-        x = self.antirectifier(x)  # Shape: [Batch size, 128, 
+        x_skip = self.antirectifier(x)  # Shape: [Batch size, 128, 
 
-        x = self.conv4(x)  # Shape: [Batch size, 128, N/16, N/16]
+        x = self.conv4(x_skip)  # Shape: [Batch size, 128, N/16, N/16]
         x = self.antirectifier(x)  # Shape: [Batch size, 256, N/16, N/16]
 
         return x, x_skip
@@ -236,6 +160,7 @@ class Decoder(nn.Module):
         x = self.deconv2(x)  # Shape: [Batch size, 32, 2N-2, N-2]
         x = self.antirectifier(x)  # Shape: [Batch size, 64, 2N-2, N-2]
         # DCNN block #3
+        x[:,:224,:,:] += x_skip
         x = self.deconv3(x)  # Shape: [Batch size, 16, 2N-1, N-1]
         x = self.antirectifier(x)  # Shape: [Batch size, 32, 2N-1, N-1]
         # DCNN block #4
@@ -272,6 +197,7 @@ class Multi_Band_SubSpaceNET(nn.Module):
         self.encoder_18k = encoder_18k if encoder_18k else Encoder_18k()
         self.encoder_24k = encoder_24k if encoder_24k else Encoder_24k()
         self.decoder = decoder if decoder else Decoder()
+        self.DropOut = nn.Dropout(0)
 
     def forward(self, x_list):
         x6, x12, x18, x24 = x_list
@@ -285,10 +211,11 @@ class Multi_Band_SubSpaceNET(nn.Module):
 
         # Concatenate along the channel dimension
         x_encoded = torch.cat([x6_encoded, x12_encoded, x18_encoded, x24_encoded], dim=1)
-        #x_skip = torch.cat([x6_skip, x12_skip, x18_skip, x24_skip], dim=1)
+        x_encoded = self.DropOut(x_encoded)
+        x_skip = torch.cat([x12_skip, x18_skip, x24_skip], dim=1)
 
         # Decode
-        Rz = self.decoder(x_encoded, x18_skip, batch_size, N)
+        Rz = self.decoder(x_encoded, x_skip, batch_size, N)
         return Rz
 
 
@@ -314,6 +241,35 @@ class AntiRectifier(nn.Module):
 
     def forward(self, x):
         return torch.cat((self.relu(x), self.relu(-x)), 1)
+
+
+class two_orders_block(nn.Module):
+    def __init__(self, Nr,K,S = 4 ,p=0.3):
+        super(two_orders_block, self).__init__()
+        self.Nr = Nr 
+        self.K = K
+        self.yconv = nn.Conv2d(2, S, kernel_size=2,stride=1)
+        self.xconv = nn.Conv2d(2, S, kernel_size=2,stride=1)
+
+        self.ydeconv = nn.ConvTranspose2d(2*S, 2*S, kernel_size=2,stride=1)
+        self.xdeconv = nn.ConvTranspose2d(2*S, 2*S, kernel_size=2,stride=1)
+        self.DropOut = nn.Dropout(p)
+        self.antirectifier = AntiRectifier()
+        
+    def forward(self, x):
+        y = reorder(x,self.Nr,self.K) # Shape: [Batch size,2, N, N]
+        y = self.yconv(y) # Shape: [Batch size,4, N-1, N-1]
+        y = self.antirectifier(y) # Shape: [Batch size,8, N-1, N-1]
+        y = self.ydeconv(y) # Shape: [Batch size,8, N, N]
+        y = order_back(y,self.Nr,self.K)
+
+        x = self.xconv(x) # Shape: [Batch size,4, N-1, N-1]
+        x = self.antirectifier(x) # Shape: [Batch size,8, N-1, N-1]
+        x = self.xdeconv(x) # Shape: [Batch size,8, N, N]
+
+        x = torch.cat((x, y), dim=1)# Shape: [Batch size,16, N, N] or [Batch size,4*S, N, N]
+        x = self.DropOut(x)
+        return x
 
 
 def reorder(x,nr,k):

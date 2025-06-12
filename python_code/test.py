@@ -19,7 +19,7 @@ from dir_definitions import RAYTRACING_DIR, ALLBSs_DIR
 from utils.check_if_close import too_close
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-model_path = "z_exp/2025-06-05_15:04#multi_bs#ues=2,k=[20, 20, 20, 20],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[4, 4, 4, 4],NS=50,input_power=5dBm/model_params.pth"
+model_path = "z_exp/2025-06-11_20:55#multi_bs_1ue#ues=2,k=[20, 20, 20, 20],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[4, 4, 4, 4],NS=50,input_power=5dBm/model_params.pth"
 
 def test_multi_ue(band: Band, num_users: int, model_path):
     assert num_users <= 2
