@@ -56,15 +56,21 @@ def find_k_highest_peaks(matrix, k):
     return np.array(peaks)
 
 
-def single_band_autocorrection(y):
+def single_band_autocorrection(y,tau = 1):
     #y = torch.tensor(y).to(DEVICE)
-    y = torch.permute(y, (0, 3, 2, 1)).contiguous()  # permute
-    y = torch.reshape(y, (y.shape[0], y.shape[1], -1, 1))
-    RY = torch.mean(torch.einsum("ijkm,ijml->ijkl",y, y.conj().transpose(2, 3)), dim=1)
+    assert tau <= y.shape[3]
+    y = torch.permute(y, (0, 3, 2, 1)).contiguous()  # permute  b x Ns x K x T --> b x T x K x Ns
+    y = torch.reshape(y, (y.shape[0], y.shape[1], -1, 1)) # b x T x K x Ns --> b x T x K*Ns x 1
+    cors = torch.einsum("ijkm,ijml->ijkl",y, y.conj().transpose(2, 3)) #shape b x T x K*Ns x K*Ns
+    if tau == 1: 
+        RY = torch.mean(cors, dim=1)
+        return RY
+    RY = torch.empty((cors.shape[0],tau,cors.shape[2],cors.shape[3]),dtype = torch.complex128,device =DEVICE)
+    for t in range(tau):
+        RY[:,t,:,:] = torch.mean(cors[:,:(cors.shape[1]-t),:,:], dim=1)
     return RY
 
-
-def estimate_evaluation(alg, multiband, per_band_y, bands, model, num_of_ues):
+def estimate_evaluation(alg, multiband, per_band_y, bands, model, num_of_ues,tau):
     '''
     estimate for evaluation
 
@@ -94,7 +100,7 @@ def estimate_evaluation(alg, multiband, per_band_y, bands, model, num_of_ues):
         main_band = bands[main_band_idx]
         per_band_RY = []
         for y in per_band_y:
-            per_band_RY.append(single_band_autocorrection(y))
+            per_band_RY.append(single_band_autocorrection(y,tau=tau))
         alternative_RY = model(per_band_RY)
 
 

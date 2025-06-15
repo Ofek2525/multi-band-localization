@@ -1,4 +1,4 @@
-
+import sys
 import torch
 import torch.optim as optim
 import pandas as pd
@@ -9,12 +9,12 @@ from estimation.multiband_net import Multi_Band_SubSpaceNET, Init_Single_Band_Su
 from estimation.loss import music_loss
 from estimation.estimate import single_band_autocorrection
 from channel.generate_channel import ues_rows_channel
-from exp_params import seed, K, Nr, fc, BW,NS,input_power, main_band_idx, num_of_BSs
+from exp_params import seed, K, Nr, fc, BW,NS,input_power, main_band_idx, num_of_BSs,tau
 from utils.bands_manipulation import get_bands_from_conf
 from utils.learning_rate_schedule import lr_schedule
 from test import test_1sample
 from channel.channel_loader import get_ue_info_by_row
-from dir_definitions import RAYTRACING_DIR, ALLBSs_DIR
+from dir_definitions import RAYTRACING_DIR, ALLBSs_DIR,ROOT_DIR
 from utils.check_if_close import too_close
 from plotting.learning_plot import plot_validation
 import shutil
@@ -25,15 +25,15 @@ import random
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-experment_name = "skip_bs1"
+experment_name = "high_SNR"
 load_path =r""
 #learning_rate=0.0001/4
-def train(learning_rate=5e-04, batch_size=20, data_samples=200000, ues_num=2, step=2000, alpha = 0.5,all_BS = 0, experment_name = "", load_path =""):
-   
+def train(learning_rate=10e-04, batch_size=20, data_samples=200000, ues_num=2, step=2000, alpha = 0.5,all_BS = 1,tau =tau, experment_name = "", load_path =""):
+    torch.manual_seed(seed)
     #create experment dir
     date = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M")
-    experment_name = date + "#" + experment_name + ("#" if experment_name !="" else "") + f"ues={ues_num},k={K},Nr={Nr},fc={fc},BW={BW},NS={NS},input_power={input_power}dBm"
-    experment_dir =fr"z_exp/{experment_name}"
+    experment_name = date + "#" + experment_name + ("#" if experment_name !="" else "") + f"tau ={tau} lr={learning_rate},batch={batch_size},ues={ues_num},k={K},Nr={Nr},fc={fc},BW={BW},NS={NS},input_power={input_power}dBm"
+    experment_dir =fr"{ROOT_DIR}/z_exp/{experment_name}"
     os.makedirs(experment_dir, exist_ok=True)
     # Initialize model, loss function, and optimizer
     if len(fc) == 1:
@@ -41,10 +41,10 @@ def train(learning_rate=5e-04, batch_size=20, data_samples=200000, ues_num=2, st
         # dec = Decoder(32).to(DEVICE)
         # model = Init_Single_Band_SubSpaceNET(enc, dec).to(DEVICE)
         model = SubSpaceNET().to(DEVICE)
-        shutil.copyfile(r"python_code/estimation/net.py", fr"{experment_dir}/net.py")
+        shutil.copyfile(rf"{ROOT_DIR}/python_code/estimation/net.py", fr"{experment_dir}/net.py")
     elif len(fc) == 4:
-        model = Multi_Band_SubSpaceNET().to(DEVICE)
-        shutil.copyfile(r"python_code/estimation/multiband_net.py", fr"{experment_dir}/multiband_net.py")
+        model = Multi_Band_SubSpaceNET(tau=tau).to(DEVICE)
+        shutil.copyfile(rf"{ROOT_DIR}/python_code/estimation/multiband_net.py", fr"{experment_dir}/multiband_net.py")
     else:
         print("error with params")
     
@@ -90,7 +90,7 @@ def train(learning_rate=5e-04, batch_size=20, data_samples=200000, ues_num=2, st
         elif multiband == 'MULTI':
             per_band_RY = []
             for y in per_band_y:
-                per_band_RY.append(single_band_autocorrection(y))
+                per_band_RY.append(single_band_autocorrection(y,tau=tau))
             alternative_RY = model(per_band_RY)
         #print(f"diff = {torch.sum(torch.abs(RY - RY.transpose(1,2).conj()))}")
         loss = music_loss(alternative_RY, [per_band_data[main_band_idx]], main_band, tmp_ues_num)
@@ -108,19 +108,28 @@ def train(learning_rate=5e-04, batch_size=20, data_samples=200000, ues_num=2, st
             print("saved")
         if batch_num % 40 == 0:
             model.eval()
-            mean_distance = test_1sample(model,np.array([[75, 75],[140,175]]), toPlot=True) /5
-            mean_distance += test_1sample(model,np.array([[190,245],[75, 75]]), toPlot=True)/5
-            mean_distance += test_1sample(model,np.array([[215,315], [320,430]]), toPlot=True)/5
-            mean_distance += test_1sample(model,np.array([[215,315], [235,335]]), toPlot=True)/5
-            mean_distance += test_1sample(model,np.array([[150,165], [170,205]]), toPlot=True)/5
+            mean_distance = test_1sample(model,np.array([[75, 75],[140,175]]),tau=tau, toPlot=True) /5
+            mean_distance += test_1sample(model,np.array([[190,245],[75, 75]]),tau=tau, toPlot=True)/5
+            mean_distance += test_1sample(model,np.array([[215,315], [320,430]]),tau=tau, toPlot=True)/5
+            mean_distance += test_1sample(model,np.array([[215,315], [235,335]]),tau=tau, toPlot=True)/5
+            mean_distance += test_1sample(model,np.array([[150,165], [170,205]]),tau=tau, toPlot=True)/5
             error_list.append(mean_distance)
             plot_validation(error_list,experment_dir)
             print(f"mean error ={mean_distance}") 
-            test_1sample(model,np.array([[40, 5]]), toPlot=True)
+            test_1sample(model,np.array([[40, 5]]),tau=tau, toPlot=True)
             model.train()
     torch.save(model.state_dict(), fr"{experment_dir}/model_params.pth")
     return model
 
 
 if __name__ == "__main__":
-    model = train(experment_name=experment_name, load_path=load_path)
+    job_array = len(sys.argv) > 1
+    if not job_array:
+        model = train(experment_name=experment_name,tau = 8, load_path=load_path)
+    else:
+        args = sys.argv[1:]
+        args = [float(args[i]) for i in range(len(args))]
+        print("args:[lr,batch,tau] =", args)
+        lr , batch, tau = args
+        model = train(learning_rate=lr, batch_size= int(batch),tau=int(tau) ,experment_name=experment_name, load_path=load_path)
+        print("args:[lr,batch,tau] =",args)

@@ -12,14 +12,14 @@ from estimation.estimate import estimate_evaluation
 from estimation.net import single_nurone, SubSpaceNET
 from estimation.multiband_net import Multi_Band_SubSpaceNET, Encoder_6k, Encoder_12k, Encoder_18k, Encoder_24k, Decoder
 from utils.bands_manipulation import get_bands_from_conf, Band
-from exp_params import seed, K, Nr, fc, BW, alg, aoa_res, T_res, plot_estimation_results
+from exp_params import seed, K, Nr, fc, BW, alg, aoa_res, T_res, tau
 from plotting.map_plot import plot_angle_time
 from plotting.tests_plot import plots_of_MultiBandNet_to_music_singal_band,plots_of_compare_SubSpaceNET_to_music_singal_band
-from dir_definitions import RAYTRACING_DIR, ALLBSs_DIR
+from dir_definitions import RAYTRACING_DIR, ALLBSs_DIR,ROOT_DIR
 from utils.check_if_close import too_close
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-model_path = "z_exp/2025-06-11_20:55#multi_bs_1ue#ues=2,k=[20, 20, 20, 20],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[4, 4, 4, 4],NS=50,input_power=5dBm/model_params.pth"
+model_path = "/home/ofekshis/multi-band-localization/z_exp/2025-06-15_13:07#with_dropouts#tau =8 lr=0.0003,batch=20,ues=2,k=[20, 20, 20, 20],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[4, 4, 4, 4],NS=50,input_power=5dBm/model_params.pth"
 
 def test_multi_ue(band: Band, num_users: int, model_path):
     assert num_users <= 2
@@ -136,13 +136,13 @@ def compare_MultiBandNet_to_music_singal_band(num_users: int, input_power_list: 
     plots_of_MultiBandNet_to_music_singal_band(results,input_power_list,num_users,model_path)
 
 
-def sweep_input_power(model_path,num_users,input_power_list,band,no_NN,alg, BS_num=1):
+def sweep_input_power(model_path,num_users,input_power_list,band,no_NN,alg, BS_num=1,tau =tau):
     #for a given method compute mse vs transmition power 
     # band = 0 for multiband!!!! 
     # band = 1 for single band 6G ,band = 2 for single band 12G ,band = 3 for 18G, band = 4 for 24G
     torch.manual_seed(seed) 
     if band == 0: 
-        model = Multi_Band_SubSpaceNET().to(DEVICE)
+        model = Multi_Band_SubSpaceNET(tau).to(DEVICE)
         model.load_state_dict(torch.load(model_path, weights_only=True))
         bands = None
     else:
@@ -209,9 +209,9 @@ def sweep_input_power(model_path,num_users,input_power_list,band,no_NN,alg, BS_n
 
 
 
-def test_1sample(model, ues_pos, toPlot=False, toPrint=True, name=None,zoom = False, input_power=None, bands=None,alg=alg, BS_num=1):
+def test_1sample(model, ues_pos, tau =tau ,toPlot=False, toPrint=True, name=None,zoom = False, input_power=None, bands=None,alg=alg, BS_num=1):
     if not name:
-        name = fr"results/test {[list(ue) for ue in ues_pos]}.png"
+        name = rf"{ROOT_DIR}/results/test {[list(ue) for ue in ues_pos]}.png"
     """---------------------------------- CONFIG ---------------------------------------------"""
     # System parameters
     num_of_ues = len(ues_pos)
@@ -235,7 +235,7 @@ def test_1sample(model, ues_pos, toPlot=False, toPrint=True, name=None,zoom = Fa
         per_band_data.append(data)
     multiband = "MULTI" if len(per_band_y) > 1 else "SINGLE"
     with torch.no_grad():
-        estimations, spectrum,aoa_grid,times_grid = estimate_evaluation(alg, multiband, per_band_y, bands, model, num_of_ues)
+        estimations, spectrum,aoa_grid,times_grid = estimate_evaluation(alg, multiband, per_band_y, bands, model, num_of_ues,tau)
 
     estimated_positions = []
     true_aoas = []

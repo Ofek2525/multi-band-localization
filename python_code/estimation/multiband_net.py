@@ -7,9 +7,9 @@ DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # Encoder 6k
 class Encoder_6k(nn.Module):
-    def __init__(self):
+    def __init__(self,tau):
         super(Encoder_6k, self).__init__()
-        self.two_orders = two_orders_block(Nr[0],K[0])     
+        self.two_orders = two_orders_block(Nr[0],K[0],cin = 2*tau)     
         self.conv1 = nn.Conv2d(32, 16, kernel_size=2,stride=2)
         self.antirectifier = AntiRectifier()
        
@@ -17,10 +17,7 @@ class Encoder_6k(nn.Module):
     def forward(self, x: torch.Tensor):
         ''''''
         ''' pre processing '''
-        x = torch.nn.functional.normalize(x, p=2, dim=(1,2), eps=1e-12)######
-        x = x.unsqueeze(dim=1)  # Shape: [Batch size, 1, N, N]
-        x = torch.cat((torch.real(x), torch.imag(x)), dim=1)  # Shape: [Batch size,2, N, N]
-        x = x.type(torch.float) 
+        x = preprocessing(x)  # Shape: [Batch size,2tuo, N, N]
         ''' Architecture flow '''
         x = self.two_orders(x) #[Batch size,16, N, N]
         x = self.antirectifier(x) # Shape: [Batch size,32, N, N]
@@ -33,9 +30,9 @@ class Encoder_6k(nn.Module):
 
 # Encoder 12k
 class Encoder_12k(nn.Module):
-    def __init__(self):
+    def __init__(self,tau):
         super(Encoder_12k, self).__init__()
-        self.two_orders = two_orders_block(Nr[1],K[1])
+        self.two_orders = two_orders_block(Nr[1],K[1],cin= 2*tau)
 
         self.conv1 = nn.Conv2d(32, 16, kernel_size=2,stride=2)
         self.conv2 = nn.Conv2d(32, 32, kernel_size=2,stride=2)
@@ -46,11 +43,7 @@ class Encoder_12k(nn.Module):
     def forward(self, x: torch.Tensor):
         ''''''
         ''' pre processing '''
-        x = torch.nn.functional.normalize(x, p=2, dim=(1,2), eps=1e-12)######
-        x = x.unsqueeze(dim=1)  # Shape: [Batch size, 1, N, N]
-        x = torch.cat((torch.real(x), torch.imag(x)), dim=1)  # Shape: [Batch size,2, N, N]
-        x = x.type(torch.float)
-    
+        x = preprocessing(x)  # Shape: [Batch size,2tuo, N, N]
         ''' Architecture flow '''
         x = self.two_orders(x) #[Batch size,16, N, N]
         x = self.antirectifier(x) # Shape: [Batch size,32, N, N]
@@ -66,9 +59,9 @@ class Encoder_12k(nn.Module):
 
 # Encoder 18k
 class Encoder_18k(nn.Module):
-    def __init__(self):
+    def __init__(self,tau):
         super(Encoder_18k, self).__init__()
-        self.two_orders = two_orders_block(Nr[2],K[2])     
+        self.two_orders = two_orders_block(Nr[2],K[2],cin= 2*tau)     
 
         self.conv1 = nn.Conv2d(32, 16, kernel_size=2,stride=2)
         self.conv2 = nn.Conv2d(32, 32, kernel_size=2,stride=2)
@@ -79,11 +72,7 @@ class Encoder_18k(nn.Module):
     def forward(self, x: torch.Tensor):
         ''''''
         ''' pre processing '''
-        x = torch.nn.functional.normalize(x, p=2, dim=(1,2), eps=1e-12)######
-        x = x.unsqueeze(dim=1)  # Shape: [Batch size, 1, N, N]
-        x = torch.cat((torch.real(x), torch.imag(x)), dim=1)  # Shape: [Batch size,2, N, N]
-        x = x.type(torch.float)
-    
+        x = preprocessing(x)  # Shape: [Batch size,2tuo, N, N]
         ''' Architecture flow '''
         x = self.two_orders(x)# Shape: [Batch size,16, N, N]
         x = self.antirectifier(x) # Shape: [Batch size,32, N, N]
@@ -102,9 +91,9 @@ class Encoder_18k(nn.Module):
 
 # Encoder 24k
 class Encoder_24k(nn.Module):
-    def __init__(self):
+    def __init__(self,tau):
         super(Encoder_24k, self).__init__()       
-        self.two_orders = two_orders_block(Nr[3],K[3])
+        self.two_orders = two_orders_block(Nr[3],K[3],cin = 2*tau)
 
         self.conv1 = nn.Conv2d(32, 16, kernel_size=2,stride=2)
         self.conv2 = nn.Conv2d(32, 32, kernel_size=2,stride=2)
@@ -117,11 +106,7 @@ class Encoder_24k(nn.Module):
     def forward(self, x: torch.Tensor):
         ''''''
         ''' pre processing '''
-        x = torch.nn.functional.normalize(x, p=2, dim=(1,2), eps=1e-12)######
-        x = x.unsqueeze(dim=1)  # Shape: [Batch size, 1, N, N]
-        x = torch.cat((torch.real(x), torch.imag(x)), dim=1)  # Shape: [Batch size,2, N, N]
-        x = x.type(torch.float)
-    
+        x = preprocessing(x)  # Shape: [Batch size,2tau, N, N]
         ''' Architecture flow '''
         x = self.two_orders(x) # Shape: [Batch size,16, N, N]
         x = self.antirectifier(x) # Shape: [Batch size,32, N, N]
@@ -155,7 +140,7 @@ class Decoder(nn.Module):
         self.relu = nn.ReLU()
         self.DropOut = nn.Dropout(self.p)
     
-    def forward(self, x: torch.Tensor, x_skip: torch.Tensor, batch_size, N):
+    def forward(self, x: torch.Tensor, x_skip: torch.Tensor):
         # DCNN block #2
         x = self.deconv2(x)  # Shape: [Batch size, 32, 2N-2, N-2]
         x = self.antirectifier(x)  # Shape: [Batch size, 64, 2N-2, N-2]
@@ -173,6 +158,7 @@ class Decoder(nn.Module):
         Rx_imag = x[:,1, :, :]  # Shape: [Batch size, N, N])
         Kx_tag = torch.complex(Rx_real, Rx_imag).to(torch.complex128)  # Shape: [Batch size, N, N])
         # Apply Gram operation diagonal loading
+        batch_size,_, N = Kx_tag.shape
         I_N = torch.eye(N)
         I_N = I_N.reshape((1, N, N))
         I_N = I_N.repeat(batch_size, 1, 1).to(DEVICE)
@@ -185,24 +171,23 @@ class Decoder(nn.Module):
 
 # Multi Band SubSpaceNET
 class Multi_Band_SubSpaceNET(nn.Module):
-    def __init__(self, 
+    def __init__(self,tau=1, 
                  encoder_6k = None,
                  encoder_12k = None,
                  encoder_18k = None,
                  encoder_24k = None,
                  decoder = None):
         super(Multi_Band_SubSpaceNET, self).__init__()
-        self.encoder_6k = encoder_6k if encoder_6k else Encoder_6k() 
-        self.encoder_12k = encoder_12k if encoder_12k else Encoder_12k()
-        self.encoder_18k = encoder_18k if encoder_18k else Encoder_18k()
-        self.encoder_24k = encoder_24k if encoder_24k else Encoder_24k()
+        self.encoder_6k = encoder_6k if encoder_6k else Encoder_6k(tau) 
+        self.encoder_12k = encoder_12k if encoder_12k else Encoder_12k(tau)
+        self.encoder_18k = encoder_18k if encoder_18k else Encoder_18k(tau)
+        self.encoder_24k = encoder_24k if encoder_24k else Encoder_24k(tau)
         self.decoder = decoder if decoder else Decoder()
-        self.DropOut = nn.Dropout(0)
+        self.DropOut = nn.Dropout(0.2)
 
     def forward(self, x_list):
         x6, x12, x18, x24 = x_list
-        batch_size,_, N = x18.shape
-
+        
         # Encode each input separately
         x6_encoded, x6_skip = self.encoder_6k(x6)
         x12_encoded, x12_skip = self.encoder_12k(x12)
@@ -215,7 +200,7 @@ class Multi_Band_SubSpaceNET(nn.Module):
         x_skip = torch.cat([x12_skip, x18_skip, x24_skip], dim=1)
 
         # Decode
-        Rz = self.decoder(x_encoded, x_skip, batch_size, N)
+        Rz = self.decoder(x_encoded, x_skip)
         return Rz
 
 
@@ -241,15 +226,22 @@ class AntiRectifier(nn.Module):
 
     def forward(self, x):
         return torch.cat((self.relu(x), self.relu(-x)), 1)
-
+    
+def preprocessing(x):
+    if len(x.shape) == 3:
+        x = x.unsqueeze(dim=1) # Shape: [Batch size, 1, N, N]
+    x = torch.nn.functional.normalize(x, p=2, dim=(2,3), eps=1e-12)######
+    x = torch.cat((torch.real(x), torch.imag(x)), dim=1)  # Shape: [Batch size,2tau, N, N]
+    x = x.type(torch.float)
+    return x
 
 class two_orders_block(nn.Module):
-    def __init__(self, Nr,K,S = 4 ,p=0.3):
+    def __init__(self, Nr,K,S = 4 ,cin =2,p=0.2):
         super(two_orders_block, self).__init__()
         self.Nr = Nr 
         self.K = K
-        self.yconv = nn.Conv2d(2, S, kernel_size=2,stride=1)
-        self.xconv = nn.Conv2d(2, S, kernel_size=2,stride=1)
+        self.yconv = nn.Conv2d(cin, S, kernel_size=2,stride=1)
+        self.xconv = nn.Conv2d(cin, S, kernel_size=2,stride=1)
 
         self.ydeconv = nn.ConvTranspose2d(2*S, 2*S, kernel_size=2,stride=1)
         self.xdeconv = nn.ConvTranspose2d(2*S, 2*S, kernel_size=2,stride=1)
