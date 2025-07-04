@@ -18,12 +18,12 @@ def get_channel(ues_loc, band, BS_num=1, input_power=None, state="test"):
     csv_filename = rf"{ALLBSs_DIR}/bs_{BS_num}/{state}_{band_freq_file_in_G}Ghz.csv"
 
     ues_data = get_ues_info(csv_filename, ues_loc, input_power)
-    y = sum([single_ue_channel(ue_data, band) for ue_data in ues_data]).unsqueeze(0)
+    y = sum([single_ue_channel(ue_data, band) for ue_data in ues_data]).unsqueeze(0)/len(ues_loc)
     return y, ues_data
 
 
 
-def ues_rows_channel(band, batch_size, ues_num, csv_rows_per_sample, BS_num=1, state="train"):
+def ues_rows_channel(band, batch_size, ues_num, csv_rows_per_sample,input_power=None, BS_num=1, state="train", augmentation=False):
     """
     :param band:
     :param batch_size:
@@ -31,10 +31,10 @@ def ues_rows_channel(band, batch_size, ues_num, csv_rows_per_sample, BS_num=1, s
     :return:ys,ues_data
     """
 
-    ues_data = generate_batches_by_rows(band, csv_rows_per_sample, BS_num, state)
+    ues_data = generate_batches_by_rows(band, csv_rows_per_sample, BS_num, state,input_power, augmentation=augmentation)
     ys = []
     for i in range(batch_size):
-        ys.append(sum(single_ue_channel(ues_data[i][ue],band) for ue in range(ues_num)))
+        ys.append(sum(single_ue_channel(ues_data[i][ue],band) for ue in range(ues_num))/ues_num)
     ys = torch.stack(ys, dim=0)
     return ys, ues_data
 
@@ -61,5 +61,5 @@ def single_ue_channel(ue_data, band):
 
 
 def watt_power_from_dbm(dbm_power):
-    return 10 ** ((dbm_power - 30) / 10)
+    return 10 ** ((dbm_power - 30) / 20)
 

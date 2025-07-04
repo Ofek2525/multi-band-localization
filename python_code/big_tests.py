@@ -5,13 +5,16 @@ import matplotlib.pyplot as plt
 
 from exp_params import seed, K, Nr, fc, BW, alg, aoa_res, T_res, plot_estimation_results
 from test import sweep_input_power
-from plotting.tests_plot import plots_of_compare_MultiBandNet_to_MultiBeamformer
+from plotting.tests_plot import plots_of_compare_MultiBandNet_to_MultiBeamformer,plots_of_test_and_save
+from dir_definitions import ROOT_DIR
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-model_path = r"z_exp/2025-06-10_18:02#multi_bs_1ue#ues=2,k=[20, 20, 20, 20],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[4, 4, 4, 4],NS=50,input_power=5dBm/model_params.pth"
+model_path = r"z_exp/2025-06-29_20:15#more_layers#tau =4 lr=0.001,batch=20,ues=2,k=[20, 20, 20, 20],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[4, 4, 4, 4],NS=50,input_power=-10.0dBm"
+if "model_params.pth" not in model_path:
+    model_path = fr"{model_path}/model_params.pth"
+model_path = fr"{ROOT_DIR}/{model_path}"
 
-
-def compare_MultiBandNet_to_MultiBeamformer(input_power_list: list[float], model_path):
+def compare_MultiBandNet_to_MultiBeamformer(input_power_list: list[float], model_path,BS_num=1):
     #compare the mse vs transmition power of our multi subband method to music with singal subband.
     num_users = 1
     results = {}
@@ -38,14 +41,30 @@ def compare_MultiBandNet_to_MultiBeamformer(input_power_list: list[float], model
         else:
             no_NN = 1 
             alg = 'MUSIC'
+            band = method
             print("-"*40)
             print(" "*15+f"without our net {fc[band-1]//1000}G"+" "*15)
-            band = method
-        avg_errors, median_errors = sweep_input_power(model_path,num_users,input_power_list,band,no_NN,alg)
+        avg_errors, median_errors = sweep_input_power(model_path,num_users,input_power_list,band,no_NN,alg,BS_num=BS_num)
         results[method] = (avg_errors, median_errors) 
     # Plot
     plots_of_compare_MultiBandNet_to_MultiBeamformer(results,input_power_list,num_users,model_path)
 
+
+def test_and_save(num_users,input_power_list: list[float], model_path,BS_num="all"):
+    #mse vs transmition power of our multi subband method.
+    results = {}
+    no_NN = 0
+    alg = 'MUSIC'
+    print("-"*40)
+    print(" "*15+"using our net"+" "*15)
+    band = 0
+    avg_errors, median_errors = sweep_input_power(model_path,num_users,input_power_list,band,no_NN,alg,BS_num=BS_num)
+    results[0] = (avg_errors, median_errors) 
+    # Plot
+    plots_of_test_and_save(results,input_power_list,num_users,model_path)
+
 if __name__ == "__main__":
-    input_power_values = [-5, 0, 5, 10]
-    compare_MultiBandNet_to_MultiBeamformer(input_power_values, model_path)
+    BS_num = "all"
+    input_power_values = [-15,-10,-5, 0, 5, 10]
+    compare_MultiBandNet_to_MultiBeamformer(input_power_values, model_path,BS_num=BS_num)
+    #test_and_save(1,input_power_values,model_path,BS_num)

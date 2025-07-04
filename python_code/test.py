@@ -19,7 +19,10 @@ from dir_definitions import RAYTRACING_DIR, ALLBSs_DIR,ROOT_DIR
 from utils.check_if_close import too_close
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-model_path = "/home/ofekshis/multi-band-localization/z_exp/2025-06-15_13:07#with_dropouts#tau =8 lr=0.0003,batch=20,ues=2,k=[20, 20, 20, 20],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[4, 4, 4, 4],NS=50,input_power=5dBm/model_params.pth"
+model_path = r"z_exp/2025-06-29_20:15#more_layers#tau =4 lr=0.001,batch=20,ues=2,k=[20, 20, 20, 20],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[4, 4, 4, 4],NS=50,input_power=-10.0dBm/model_params.pth"
+if "model_params.pth" not in model_path:
+    model_path = fr"{model_path}/model_params.pth"
+model_path = fr"{ROOT_DIR}/{model_path}"
 
 def test_multi_ue(band: Band, num_users: int, model_path):
     assert num_users <= 2
@@ -152,20 +155,15 @@ def sweep_input_power(model_path,num_users,input_power_list,band,no_NN,alg, BS_n
         else:    
             model = single_nurone().to(DEVICE)      
         bands = [get_bands_from_conf(fc, Nr, K, BW)[band - 1]]
-
-        ####
     model.eval()
-    band_freq_file_in_G = 6
-    csv_file = rf"{ALLBSs_DIR}/bs_{BS_num}/test_{band_freq_file_in_G}Ghz.csv"
-    df = pd.read_csv(csv_file)
-    num_rows = len(df)
-        ####
-    
-    ue_indices = list(range(num_rows))
-    comb_indices = list(combinations(ue_indices, num_users))
 
     avg_errors = []
     median_errors = []
+
+    if BS_num == "all":
+        BS_list = list(range(1,16))
+    else:
+        BS_list = [BS_num]    
 
     for input_power in input_power_list:
         total_error = 0
@@ -174,23 +172,34 @@ def sweep_input_power(model_path,num_users,input_power_list,band,no_NN,alg, BS_n
         temp_ue_row = 0
         problematic_locs = []
 
-        for comb in comb_indices:
-            if num_users > 2:
-                if temp_ue_row % 10 != 0:
+        for BS_num in BS_list:
+
+                ####
+            csv_file = rf"{ALLBSs_DIR}/bs_{BS_num}/test_6Ghz.csv"
+            df = pd.read_csv(csv_file)
+            num_rows = len(df)
+                ####
+            
+            ue_indices = list(range(num_rows))
+            comb_indices = list(combinations(ue_indices, num_users))
+
+            for comb in comb_indices:
+                if num_users > 2:
+                    if temp_ue_row % 10 != 0:
+                        temp_ue_row += 1
+                        continue
                     temp_ue_row += 1
-                    continue
-                temp_ue_row += 1
-            ue_locs = []
-            for row in comb:
-                ue_info = get_ue_info_by_row(csv_file, row)
-                ue_locs.append(ue_info['ue_loc'][:2])
-            ue_locs_array = np.array(ue_locs)
-            if too_close(ue_locs_array,50): continue
-            error = test_1sample(model, ue_locs_array, input_power=input_power, toPrint=False, bands=bands,alg=alg, BS_num=BS_num)
-            total_error += error
-            error_list.append(error)
-            valid_comb_count += 1
-            if error > 70: problematic_locs.append(ue_locs)
+                ue_locs = []
+                for row in comb:
+                    ue_info = get_ue_info_by_row(csv_file, row)
+                    ue_locs.append(ue_info['ue_loc'][:2])
+                ue_locs_array = np.array(ue_locs)
+                if too_close(ue_locs_array,50): continue
+                error = test_1sample(model, ue_locs_array, input_power=input_power, toPrint=False, bands=bands,alg=alg, BS_num=BS_num)
+                total_error += error
+                error_list.append(error)
+                valid_comb_count += 1
+                if error > 70: problematic_locs.append(ue_locs)
 
         avg_error = total_error / valid_comb_count
         avg_errors.append(avg_error)
@@ -217,6 +226,8 @@ def test_1sample(model, ues_pos, tau =tau ,toPlot=False, toPrint=True, name=None
     num_of_ues = len(ues_pos)
     '''----------------------------------------------------------------------------------------'''
     # random seed for run
+    cpu_rng_state = torch.get_rng_state()
+    cuda_rng_state = torch.cuda.get_rng_state_all()
     torch.manual_seed(seed)
     assert ues_pos.shape[1] == 2
     if bands is None:
@@ -274,20 +285,23 @@ def test_1sample(model, ues_pos, tau =tau ,toPlot=False, toPrint=True, name=None
 
     if toPlot:
         plot_angle_time(np.array(spectrum[0, :, :].to("cpu")), aoa_grid, times_grid, ues_pos,true_aoas,true_toas,name,zoom)
+
+    torch.set_rng_state(cpu_rng_state)
+    torch.cuda.set_rng_state_all(cuda_rng_state)    
     # return error_distance
     return total_error / num_ues
 
 
 if __name__ == "__main__":
     print("running...")
-    BS_num = 1
-    num_ue = 1
+    BS_num = "all"
+    num_ue = 2
     bands = get_bands_from_conf(fc, Nr, K, BW)
     no_sweep = 0 # sweep snr - 0 / one snr - 1
     if no_sweep == 1:
         test_multi_ue(bands[0], num_ue,model_path)
     elif no_sweep == 0:
-        input_power_values = [-5, 0, 5, 10]
+        input_power_values = [-15,-10,-5, 0, 5, 10]
         compare_MultiBandNet_to_music_singal_band(num_ue, input_power_values,model_path,BS_num = BS_num)
     else:
         print("only 0/1")

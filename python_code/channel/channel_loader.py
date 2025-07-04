@@ -41,18 +41,28 @@ def sample_random_ues(csv_filename: str, ues_num: int):
     return results
 
 
-def get_ue_info_by_row(csv_filename: str, row_num: int):
+def get_ue_info_by_row(csv_filename: str, row_num: int,sweeped_power=None, rand_aoa_flag=False):
     df = pd.read_csv(csv_filename)
 
     if row_num >= len(df):
         return None  # Handle out-of-bounds safely
-
+     
     row = df.iloc[row_num]
     n_path = int(row['n_path'])
-
-    powers = [(input_power - row[f'path_loss_{i}']) for i in range(1, n_path + 1) if f'path_loss_{i}' in row]
+    ue_power = input_power
+    if sweeped_power is not None:
+        ue_power = sweeped_power
+    
+    # Augmentation for the angle
+    angle_change = 0
+    if rand_aoa_flag:
+        real_los_aoa = row['aod_1'] + 90
+        new_los_aoa = np.random.uniform(-90, 90)
+        angle_change = new_los_aoa - real_los_aoa
+    
+    powers = [(ue_power - row[f'path_loss_{i}']) for i in range(1, n_path + 1) if f'path_loss_{i}' in row]
     toa = [row[f'delay_{i}'] / 1e-6 for i in range(1, n_path + 1) if f'delay_{i}' in row]
-    aoa = [row[f'aod_{i}'] + 90 for i in range(1, n_path + 1) if f'aod_{i}' in row]
+    aoa = [row[f'aod_{i}'] + 90 + angle_change for i in range(1, n_path + 1) if f'aod_{i}' in row]
 
     return {
         "row_num": row_num,
@@ -98,7 +108,7 @@ def get_ues_info(csv_filename: str, ue_locs: list, sweeped_power=None):
 
 
 
-def generate_batches_by_rows(band: Band, csv_rows_per_sample, BS_num, state="train"):
+def generate_batches_by_rows(band: Band, csv_rows_per_sample, BS_num, state="train",input_power= None, augmentation=False):
     band_freq_file_in_G = int(band.fc / 1000)
     csv_filename = rf"{ALLBSs_DIR}/bs_{BS_num}/{state}_{band_freq_file_in_G}Ghz.csv"
 
@@ -106,7 +116,7 @@ def generate_batches_by_rows(band: Band, csv_rows_per_sample, BS_num, state="tra
     for sample in csv_rows_per_sample:
         results = []
         for ue_row in sample:
-            results.append(get_ue_info_by_row(csv_filename, ue_row))
+            results.append(get_ue_info_by_row(csv_filename, ue_row,input_power, rand_aoa_flag=augmentation))
         batch.append(results)
     return batch
 

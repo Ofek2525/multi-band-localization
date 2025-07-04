@@ -183,7 +183,8 @@ class Multi_Band_SubSpaceNET(nn.Module):
         self.encoder_18k = encoder_18k if encoder_18k else Encoder_18k(tau)
         self.encoder_24k = encoder_24k if encoder_24k else Encoder_24k(tau)
         self.decoder = decoder if decoder else Decoder()
-        self.DropOut = nn.Dropout(0.2)
+        self.DropOut1 = nn.Dropout(0)
+        self.DropOut2 = nn.Dropout(0)
 
     def forward(self, x_list):
         x6, x12, x18, x24 = x_list
@@ -196,9 +197,9 @@ class Multi_Band_SubSpaceNET(nn.Module):
 
         # Concatenate along the channel dimension
         x_encoded = torch.cat([x6_encoded, x12_encoded, x18_encoded, x24_encoded], dim=1)
-        x_encoded = self.DropOut(x_encoded)
+        x_encoded = self.DropOut1(x_encoded)
         x_skip = torch.cat([x12_skip, x18_skip, x24_skip], dim=1)
-
+        x_skip = self.DropOut2(x_skip)
         # Decode
         Rz = self.decoder(x_encoded, x_skip)
         return Rz
@@ -230,7 +231,7 @@ class AntiRectifier(nn.Module):
 def preprocessing(x):
     if len(x.shape) == 3:
         x = x.unsqueeze(dim=1) # Shape: [Batch size, 1, N, N]
-    x = torch.nn.functional.normalize(x, p=2, dim=(2,3), eps=1e-12)######
+    #x = torch.nn.functional.normalize(x, p=2, dim=(2,3), eps=1e-12)######
     x = torch.cat((torch.real(x), torch.imag(x)), dim=1)  # Shape: [Batch size,2tau, N, N]
     x = x.type(torch.float)
     return x
