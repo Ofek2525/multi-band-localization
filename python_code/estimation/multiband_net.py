@@ -273,5 +273,3 @@ def reorder(x,nr,k):
 
 def order_back(x,nr,k):
     return reorder(x,k,nr)
-
-

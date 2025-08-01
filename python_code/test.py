@@ -19,7 +19,7 @@ from dir_definitions import RAYTRACING_DIR, ALLBSs_DIR,ROOT_DIR
 from utils.check_if_close import too_close
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-model_path = r"z_exp/2025-06-29_20:15#more_layers#tau =4 lr=0.001,batch=20,ues=2,k=[20, 20, 20, 20],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[4, 4, 4, 4],NS=50,input_power=-10.0dBm/model_params.pth"
+model_path = r"z_exp/2025-06-29_20:15#more_layers#tau =4 lr=0.001,batch=20,ues=2,k=[20, 20, 20, 20],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[4, 4, 4, 4],NS=50,input_power=-10.0dBm"
 if "model_params.pth" not in model_path:
     model_path = fr"{model_path}/model_params.pth"
 model_path = fr"{ROOT_DIR}/{model_path}"
@@ -184,7 +184,7 @@ def sweep_input_power(model_path,num_users,input_power_list,band,no_NN,alg, BS_n
             comb_indices = list(combinations(ue_indices, num_users))
 
             for comb in comb_indices:
-                if num_users > 2:
+                if num_users >= 3: 
                     if temp_ue_row % 10 != 0:
                         temp_ue_row += 1
                         continue
@@ -295,7 +295,7 @@ def test_1sample(model, ues_pos, tau =tau ,toPlot=False, toPrint=True, name=None
 if __name__ == "__main__":
     print("running...")
     BS_num = "all"
-    num_ue = 2
+    num_ue = 1
     bands = get_bands_from_conf(fc, Nr, K, BW)
     no_sweep = 0 # sweep snr - 0 / one snr - 1
     if no_sweep == 1:

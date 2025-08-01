@@ -50,14 +50,13 @@ def compare_MultiBandNet_to_MultiBeamformer(input_power_list: list[float], model
     plots_of_compare_MultiBandNet_to_MultiBeamformer(results,input_power_list,num_users,model_path)
 
 
-def test_and_save(num_users,input_power_list: list[float], model_path,BS_num="all"):
+def test_and_save(num_users,input_power_list: list[float], model_path,BS_num="all",band=0):
     #mse vs transmition power of our multi subband method.
     results = {}
     no_NN = 0
     alg = 'MUSIC'
     print("-"*40)
     print(" "*15+"using our net"+" "*15)
-    band = 0
     avg_errors, median_errors = sweep_input_power(model_path,num_users,input_power_list,band,no_NN,alg,BS_num=BS_num)
     results[0] = (avg_errors, median_errors) 
     # Plot
@@ -67,4 +66,5 @@ if __name__ == "__main__":
     BS_num = "all"
     input_power_values = [-15,-10,-5, 0, 5, 10]
     compare_MultiBandNet_to_MultiBeamformer(input_power_values, model_path,BS_num=BS_num)
-    #test_and_save(1,input_power_values,model_path,BS_num)
+#   test_and_save(2,input_power_values,model_path,BS_num)
+#   test_and_save(1,input_power_values,model_path,BS_num)

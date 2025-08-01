@@ -6,11 +6,15 @@ from utils.bands_manipulation import get_bands_from_conf, Band
 from exp_params import seed, tau,K, Nr, fc, BW, alg, aoa_res, T_res, plot_estimation_results
 from plotting.map_plot import plot_angle_time
 from test import test_1sample
+from dir_definitions import ROOT_DIR
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 BS_num =13
-model_path = r"z_exp/2025-06-29_20:26#for_paper1#tau =4 lr=0.001,batch=20,ues=2,k=[20, 20, 20, 20],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[4, 4, 4, 4],NS=50,input_power=-10.0dBm/model_params.pth"
-no_nn = 1
+model_path = r"z_exp/2025-07-06_19:24#main_band_24G#tau =4 lr=0.001,batch=20,ues=2,k=[20, 20, 20, 20],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[4, 4, 4, 4],NS=50,input_power=-10dBm"
+if "model_params.pth" not in model_path:
+    model_path = fr"{model_path}/model_params.pth"
+model_path = fr"{ROOT_DIR}/{model_path}"
+no_nn = 0
 def main():
 
     # for cases when exp_parans are multiband:

@@ -3,21 +3,21 @@ import numpy as np
 import pandas as pd
 import os
 
-Z_EXP = "/home/ofekshis/multi-band-localization/z_exp"
+ROOT = "/home/ofekshis/multi-band-localization"
 
 # All no NN DATA
-no_nn_path = f"{Z_EXP}/2025-06-29_20:15#more_layers#tau =4 lr=0.001,batch=20,ues=2,k=[20, 20, 20, 20],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[4, 4, 4, 4],NS=50,input_power=-10.0dBm"
+no_nn_path = fr"{ROOT}/z_exp/0important_copys/results_for_all_musics:NS=50,Tres=0.03"
 
 # All NN DATA per SNR:
-nn_m15snr_path = f"{Z_EXP}/2025-06-29_20:26#for_paper1#tau =4 lr=0.001,batch=20,ues=2,k=[20, 20, 20, 20],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[4, 4, 4, 4],NS=50,input_power=-15.0dBm"
-nn_m10snr_path = f"{Z_EXP}/2025-06-29_20:26#for_paper1#tau =4 lr=0.001,batch=20,ues=2,k=[20, 20, 20, 20],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[4, 4, 4, 4],NS=50,input_power=-10.0dBm"
-nn_m5snr_path = f"{Z_EXP}/2025-06-29_20:26#for_paper1#tau =4 lr=0.001,batch=20,ues=2,k=[20, 20, 20, 20],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[4, 4, 4, 4],NS=50,input_power=-5.0dBm"
-nn_0snr_path = f"{Z_EXP}/2025-06-29_20:26#for_paper1#tau =4 lr=0.001,batch=20,ues=2,k=[20, 20, 20, 20],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[4, 4, 4, 4],NS=50,input_power=0.0dBm"
-nn_5snr_path = f"{Z_EXP}/2025-06-29_21:34#for_paper1#tau =4 lr=0.001,batch=20,ues=2,k=[20, 20, 20, 20],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[4, 4, 4, 4],NS=50,input_power=5.0dBm"
-nn_10snr_path = f"{Z_EXP}/2025-06-30_01:05#for_paper1#tau =4 lr=0.001,batch=20,ues=2,k=[20, 20, 20, 20],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[4, 4, 4, 4],NS=50,input_power=10.0dBm"
+nn_m15snr_path = fr"{ROOT}/z_exp/0important_copys/multibandnet:NS=50,Tres=0.03/2025-06-29_20:26#for_paper1#tau =4 lr=0.001,batch=20,ues=2,k=[20, 20, 20, 20],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[4, 4, 4, 4],NS=50,input_power=-15.0dBm"
+nn_m10snr_path = fr"{ROOT}/z_exp/0important_copys/multibandnet:NS=50,Tres=0.03/2025-06-29_20:26#for_paper1#tau =4 lr=0.001,batch=20,ues=2,k=[20, 20, 20, 20],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[4, 4, 4, 4],NS=50,input_power=-10.0dBm"
+nn_m5snr_path = fr"{ROOT}/z_exp/0important_copys/multibandnet:NS=50,Tres=0.03/2025-06-29_20:26#for_paper1#tau =4 lr=0.001,batch=20,ues=2,k=[20, 20, 20, 20],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[4, 4, 4, 4],NS=50,input_power=-5.0dBm"
+nn_0snr_path = fr"{ROOT}/z_exp/0important_copys/multibandnet:NS=50,Tres=0.03/2025-06-29_20:26#for_paper1#tau =4 lr=0.001,batch=20,ues=2,k=[20, 20, 20, 20],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[4, 4, 4, 4],NS=50,input_power=0.0dBm"
+nn_5snr_path = fr"{ROOT}/z_exp/0important_copys/multibandnet:NS=50,Tres=0.03/2025-06-29_21:34#for_paper1#tau =4 lr=0.001,batch=20,ues=2,k=[20, 20, 20, 20],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[4, 4, 4, 4],NS=50,input_power=5.0dBm"
+nn_10snr_path = fr"{ROOT}/z_exp/0important_copys/multibandnet:NS=50,Tres=0.03/2025-06-30_01:05#for_paper1#tau =4 lr=0.001,batch=20,ues=2,k=[20, 20, 20, 20],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[4, 4, 4, 4],NS=50,input_power=10.0dBm"
 
-nn_data_paths = [nn_m15snr_path, nn_m10snr_path, nn_m5snr_path, nn_0snr_path, nn_5snr_path, nn_10snr_path]
-snr_list = [-15, -10, -5, 0, 5, 10]
+nn_data_paths = [nn_m15snr_path, nn_m10snr_path, nn_m5snr_path, nn_0snr_path, nn_5snr_path]
+snr_list = [-15, -10, -5, 0, 5]
 bands = ['6GHz (no NN)', '12GHz (no NN)', '18GHz (no NN)', '24GHz (no NN)']
 
 def csv_to_list(ue_num, samples_only_per_snr_FLAG):
@@ -100,17 +100,17 @@ def plot_MultiBandNet_and_music_singal_band(ue_num, samples_only_per_snr_FLAG=Tr
         )
 
     # Optional: Avg MultiBeamformer (no NN)
-    if ue_num == 1:
-        plt.plot(
-            snr_list,
-            avg_errors[-1],
-            label="Avg MultiBeamformer (no NN)",
-            color='tab:purple',
-            linestyle='solid',
-            linewidth=2,
-            marker='v',
-            markersize=5
-        )
+    # if ue_num == 1:
+    #     plt.plot(
+    #         snr_list,
+    #         avg_errors[-1],
+    #         label="Avg MultiBeamformer (no NN)",
+    #         color='tab:purple',
+    #         linestyle='solid',
+    #         linewidth=2,
+    #         marker='v',
+    #         markersize=5
+    #     )
 
     plt.title(f"Avg Localization Error vs SNR (UEs={ue_num})")
     plt.xlabel("Transmission power [dBm]")
@@ -126,5 +126,5 @@ def plot_MultiBandNet_and_music_singal_band(ue_num, samples_only_per_snr_FLAG=Tr
     
 
 if __name__ == "__main__":
-    for i in [1, 2]:
-        plot_MultiBandNet_and_music_singal_band(i, samples_only_per_snr_FLAG=False)
+    for i in [1]:
+        plot_MultiBandNet_and_music_singal_band(i, samples_only_per_snr_FLAG=True)

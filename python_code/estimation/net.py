@@ -32,7 +32,6 @@ class SubSpaceNET(nn.Module):
     def forward(self, x: torch.Tensor):
         ''''''
         ''' pre processing '''
-        x = torch.nn.functional.normalize(x, p=2, dim=(1,2), eps=1e-12)######
         x = x.unsqueeze(dim=1)  # Shape: [Batch size, 1, N, N]
         x = torch.cat((torch.real(x), torch.imag(x)), dim=1)  # Shape: [Batch size,2, N, N]
         batch_size,_, _, N = x.shape

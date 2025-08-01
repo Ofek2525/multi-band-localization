@@ -26,10 +26,10 @@ import random
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-experment_name = "for_paper1"
+experment_name = "for_paper6ghz"
 load_path =r""
 #learning_rate=0.0001/4
-def train(learning_rate=1e-03, batch_size=20, data_samples=150000, ues_num=2, step=2500, alpha = 0.5,all_BS = 1,input_power=input_power,tau =tau, experment_name = "", load_path =""):
+def train(learning_rate=1e-03, batch_size=20, data_samples=150000, ues_num=2, step=2500, alpha = 0.5,all_BS = 1,input_power=input_power,tau =tau,band=0, experment_name = "", load_path =""):
     torch.manual_seed(seed)
     np.random.seed(seed)
     random.seed(seed)
@@ -39,26 +39,25 @@ def train(learning_rate=1e-03, batch_size=20, data_samples=150000, ues_num=2, st
     experment_dir =fr"{ROOT_DIR}/z_exp/{experment_name}"
     os.makedirs(experment_dir, exist_ok=True)
     # Initialize model, loss function, and optimizer
-    if len(fc) == 1:
-        # enc = Encoder_6k().to(DEVICE)
-        # dec = Decoder(32).to(DEVICE)
-        # model = Init_Single_Band_SubSpaceNET(enc, dec).to(DEVICE)
-        model = SubSpaceNET().to(DEVICE)
-        shutil.copyfile(rf"{ROOT_DIR}/python_code/estimation/net.py", fr"{experment_dir}/net.py")
-    elif len(fc) == 4:
-        model = Multi_Band_SubSpaceNET(tau=tau).to(DEVICE)
+    if band == 0: 
+        model = Multi_Band_SubSpaceNET(tau).to(DEVICE)
+        bands = get_bands_from_conf(fc, Nr, K, BW)
         shutil.copyfile(rf"{ROOT_DIR}/python_code/estimation/multiband_net.py", fr"{experment_dir}/multiband_net.py")
+    elif band in [1,2,3,4]:
+        model = SubSpaceNET(band=band).to(DEVICE)     
+        bands = [get_bands_from_conf(fc, Nr, K, BW)[band - 1]]
+        shutil.copyfile(rf"{ROOT_DIR}/python_code/estimation/net.py", fr"{experment_dir}/net.py")
     else:
-        print("error with params")
+        print("error: band needs to be 0,1,2,3 or 4")
+        return
     
     if load_path != "":
         model.load_state_dict(torch.load(load_path,weights_only=True))
     model.train()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate,weight_decay=0.01)
-    bands = get_bands_from_conf(fc, Nr, K, BW)
     error_list = []
 
-    main_band = bands[0] if len(fc) == 1 else bands[main_band_idx]
+    main_band = bands[0] if len(bands) == 1 else bands[main_band_idx]
     BS_num = 1
     # Training loop
     for batch_num in range(data_samples // batch_size):
@@ -96,7 +95,7 @@ def train(learning_rate=1e-03, batch_size=20, data_samples=150000, ues_num=2, st
                 per_band_RY.append(single_band_autocorrection(y,tau=tau))
             alternative_RY = model(per_band_RY)
         #print(f"diff = {torch.sum(torch.abs(RY - RY.transpose(1,2).conj()))}")
-        loss = music_loss(alternative_RY, [per_band_data[main_band_idx]], main_band, tmp_ues_num)
+        loss = music_loss(alternative_RY, [per_band_data[main_band_idx if multiband == "MULTI" else 0]], main_band, tmp_ues_num)
         # Backward pass
         optimizer.zero_grad()
         loss.backward()
@@ -111,16 +110,16 @@ def train(learning_rate=1e-03, batch_size=20, data_samples=150000, ues_num=2, st
             print("saved")
         if batch_num % 40 == 0:
             model.eval()
-            mean_distance = test_1sample(model,np.array([[75, 75],[140,175]]),tau=tau, toPlot=True,input_power=input_power)
-            mean_distance += test_1sample(model,np.array([[190,245],[75, 75]]),tau=tau, toPlot=True,input_power=input_power)
-            mean_distance += test_1sample(model,np.array([[215,315], [320,430]]),tau=tau, toPlot=True,input_power=input_power)
-            mean_distance += test_1sample(model,np.array([[215,315], [235,335]]),tau=tau, toPlot=True,input_power=input_power)
-            mean_distance += test_1sample(model,np.array([[150,165], [170,205]]),tau=tau, toPlot=True,input_power=input_power)
+            mean_distance = test_1sample(model,np.array([[75, 75],[140,175]]),tau=tau, toPlot=True,input_power=input_power,bands=bands)
+            mean_distance += test_1sample(model,np.array([[190,245],[75, 75]]),tau=tau, toPlot=True,input_power=input_power,bands=bands)
+            mean_distance += test_1sample(model,np.array([[215,315], [320,430]]),tau=tau, toPlot=True,input_power=input_power,bands=bands)
+            mean_distance += test_1sample(model,np.array([[215,315], [235,335]]),tau=tau, toPlot=True,input_power=input_power,bands=bands)
+            mean_distance += test_1sample(model,np.array([[150,165], [170,205]]),tau=tau, toPlot=True,input_power=input_power,bands=bands)
             mean_distance = mean_distance/5
             error_list.append(mean_distance)
             plot_validation(error_list,experment_dir)
             print(f"mean error ={mean_distance}") 
-            test_1sample(model,np.array([[40, 5]]),tau=tau, toPlot=True,input_power=input_power)
+            test_1sample(model,np.array([[40, 5]]),tau=tau, toPlot=True,input_power=input_power,bands=bands)
             model.train()
     torch.save(model.state_dict(), fr"{experment_dir}/model_params.pth")
     return model, fr"{experment_dir}/model_params.pth"
@@ -129,14 +128,15 @@ def train(learning_rate=1e-03, batch_size=20, data_samples=150000, ues_num=2, st
 if __name__ == "__main__":
     job_array = len(sys.argv) > 1
     if not job_array:
-        model, model_path = train(experment_name=experment_name,tau = 4, load_path=load_path,input_power=-10)
+        model, model_path = train(experment_name=experment_name,tau = 4, load_path=load_path,input_power=-10,band=1)
     else:
         args = sys.argv[1:]
         args = [float(args[i]) for i in range(len(args))]
         print("args:[input_power,lr,batch,tau] =", args)
         input_power,lr , batch, tau = args
-        model, model_path = train(learning_rate=lr, batch_size= int(batch),tau=int(tau),input_power=input_power ,experment_name=experment_name, load_path=load_path)
-        input_power_values = [-15,-10,-5, 0, 5, 10]
-        test_and_save(1,input_power_values,model_path,"all")
-        test_and_save(2,input_power_values,model_path,"all")
+        band=1
+        model, model_path = train(learning_rate=lr, batch_size= int(batch),tau=int(tau),input_power=input_power ,experment_name=experment_name, load_path=load_path,band=band)
+        input_power_values = [input_power]
+        test_and_save(1,input_power_values,model_path,"all",band=band)
+        test_and_save(2,input_power_values,model_path,"all",band=band)
         print("args:[input_power,lr,batch,tau] =",args)
