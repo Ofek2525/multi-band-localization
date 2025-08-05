@@ -26,10 +26,10 @@ import random
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-experment_name = "for_paper6ghz"
+experment_name = "for_paper_3ues_6ghz"
 load_path =r""
 #learning_rate=0.0001/4
-def train(learning_rate=1e-03, batch_size=20, data_samples=150000, ues_num=2, step=2500, alpha = 0.5,all_BS = 1,input_power=input_power,tau =tau,band=0, experment_name = "", load_path =""):
+def train(learning_rate=1e-03, batch_size=20, data_samples=150000, ues_num=3, step=2500, alpha = 0.5,all_BS = 1,input_power=input_power,tau =tau,band=0, experment_name = "", load_path =""):
     torch.manual_seed(seed)
     np.random.seed(seed)
     random.seed(seed)
@@ -108,7 +108,7 @@ def train(learning_rate=1e-03, batch_size=20, data_samples=150000, ues_num=2, st
         if batch_num % 100 == 0  and batch_num != 0 :
             torch.save(model.state_dict(), fr"{experment_dir}/model_params.pth")
             print("saved")
-        if batch_num % 40 == 0:
+        if batch_num % 200 == 0:
             model.eval()
             mean_distance = test_1sample(model,np.array([[75, 75],[140,175]]),tau=tau, toPlot=True,input_power=input_power,bands=bands)
             mean_distance += test_1sample(model,np.array([[190,245],[75, 75]]),tau=tau, toPlot=True,input_power=input_power,bands=bands)
@@ -139,4 +139,5 @@ if __name__ == "__main__":
         input_power_values = [input_power]
         test_and_save(1,input_power_values,model_path,"all",band=band)
         test_and_save(2,input_power_values,model_path,"all",band=band)
+        test_and_save(3,input_power_values,model_path,"all",band=band)
         print("args:[input_power,lr,batch,tau] =",args)

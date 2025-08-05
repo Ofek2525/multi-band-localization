@@ -49,7 +49,7 @@ def single_ue_channel(ue_data, band):
     N_0 = -174  # dBm
     toa_steering = torch.tensor(compute_time_options(band.fc, band.K, band.BW, values=np.array(ue_data['toa'])),device=DEVICE)
     aoa_steering = torch.tensor(compute_angle_options(np.sin(np.deg2rad(ue_data['aoa'])), values=np.arange(band.Nr)).T,device = DEVICE)
-    powers = watt_power_from_dbm(torch.tensor(ue_data['powers'],device=DEVICE)).unsqueeze(0)
+    powers = watt_power_from_dbm(torch.tensor(ue_data['powers'],device=DEVICE)).unsqueeze(0)#powers = watt_power_from_dbm(torch.tensor([ue_data['powers'][0]]+[0]*(len(ue_data['powers'])-1),device=DEVICE)).unsqueeze(0)
     aoa_steering *= powers
     h = aoa_steering.mm(toa_steering).unsqueeze(-1)
     BW_loss = 10 * np.log10(band.BW * 10 ** 6)

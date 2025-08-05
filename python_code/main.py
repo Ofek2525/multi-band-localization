@@ -9,23 +9,23 @@ from test import test_1sample
 from dir_definitions import ROOT_DIR
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-BS_num =13
-model_path = r"z_exp/2025-07-06_19:24#main_band_24G#tau =4 lr=0.001,batch=20,ues=2,k=[20, 20, 20, 20],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[4, 4, 4, 4],NS=50,input_power=-10dBm"
+BS_num =2
+model_path = r"z_exp/2025-06-30_01:05#for_paper1#tau =4 lr=0.001,batch=20,ues=2,k=[20, 20, 20, 20],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[4, 4, 4, 4],NS=50,input_power=10.0dBm"
 if "model_params.pth" not in model_path:
     model_path = fr"{model_path}/model_params.pth"
 model_path = fr"{ROOT_DIR}/{model_path}"
-no_nn = 0
+no_nn = 1
 def main():
 
     # for cases when exp_parans are multiband:
-    main_band = 1
+    main_band = 4
     # 1 for single band 6G with no net
     # 2 for single band 12G with no net
     # 3 for single band 18G with no net
     # 4 for single band 24G with no net
 
     bands = None
-    ues_pos = np.array([[465,0]])#[245, 355]#[160, 215]#[100,90]#[240,370]#[120,125]#[50,15]  # transmitter UE position    
+    ues_pos = np.array([[75, 195],[260,410]])#[[50,220],[580, 380]]#[245, 355]#[160, 215]#[100,90]#[240,370]#[120,125]#[50,15]  # transmitter UE position    
     if no_nn == 0:
         if len(fc) == 1:
             model = SubSpaceNET().to(DEVICE)
