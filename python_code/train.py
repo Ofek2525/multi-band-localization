@@ -26,27 +26,27 @@ import random
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-experment_name = "retrain1"
+experiment_name = "for_paper_3ues_6ghz"
 load_path =r""
 #learning_rate=0.0001/4
-def train(learning_rate=1e-03, batch_size=16, data_samples=150000, ues_num=2, step=3000, alpha = 0.5,all_BS = 1,input_power=input_power,tau =tau,NS=NS,band=0, experment_name = "", load_path =""):
+def train(learning_rate=1e-03, batch_size=20, data_samples=150000, ues_num=3, step=2500, alpha = 0.5,all_BS = 1,input_power=input_power,tau =tau,band=0, experiment_name = "", load_path =""):
     torch.manual_seed(seed)
     np.random.seed(seed)
     random.seed(seed)
-    #create experment dir
+    #create experiment dir
     date = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M")
-    experment_name = date + "#" + experment_name + ("#" if experment_name !="" else "") + f"tau ={tau} lr={learning_rate},batch={batch_size},ues={ues_num},k={K},Nr={Nr},fc={fc},BW={BW},NS={NS},input_power={input_power}dBm"
-    experment_dir =fr"{ROOT_DIR}/z_exp/{experment_name}"
-    os.makedirs(experment_dir, exist_ok=True)
+    experiment_name = date + "#" + experiment_name + ("#" if experiment_name !="" else "") + f"tau ={tau} lr={learning_rate},batch={batch_size},ues={ues_num},k={K},Nr={Nr},fc={fc},BW={BW},NS={NS},input_power={input_power}dBm"
+    experiment_dir =fr"{ROOT_DIR}/z_exp/{experiment_name}"
+    os.makedirs(experiment_dir, exist_ok=True)
     # Initialize model, loss function, and optimizer
     if band == 0: 
         model = Multi_Band_SubSpaceNET(tau).to(DEVICE)
         bands = get_bands_from_conf(fc, Nr, K, BW)
-        shutil.copyfile(rf"{ROOT_DIR}/python_code/estimation/multiband_net.py", fr"{experment_dir}/multiband_net.py")
+        shutil.copyfile(rf"{ROOT_DIR}/python_code/estimation/multiband_net.py", fr"{experiment_dir}/multiband_net.py")
     elif band in [1,2,3,4]:
         model = SubSpaceNET(band=band).to(DEVICE)     
         bands = [get_bands_from_conf(fc, Nr, K, BW)[band - 1]]
-        shutil.copyfile(rf"{ROOT_DIR}/python_code/estimation/net.py", fr"{experment_dir}/net.py")
+        shutil.copyfile(rf"{ROOT_DIR}/python_code/estimation/net.py", fr"{experiment_dir}/net.py")
     else:
         print("error: band needs to be 0,1,2,3 or 4")
         return
@@ -72,7 +72,11 @@ def train(learning_rate=1e-03, batch_size=16, data_samples=150000, ues_num=2, st
         df = pd.read_csv(csv_filename)
         num_rows = len(df)
             #####
-        csv_rows_per_sample = [random.sample(range(1, num_rows), ues_num) for _ in range(batch_size)]    
+        try:
+            csv_rows_per_sample = [random.sample(range(1, num_rows), ues_num) for _ in range(batch_size)]
+        except:
+            print(f"Warning: Unable to sample {ues_num} users from {num_rows} rows for BS {BS_num}")
+            continue
         # for each frequency sub-band
         for band in bands:
             # generate the channel
@@ -102,7 +106,7 @@ def train(learning_rate=1e-03, batch_size=16, data_samples=150000, ues_num=2, st
             print(
                 f'batch [{batch_num}/{data_samples // batch_size}], {add}Loss: {loss:.4f}')
         if batch_num % 100 == 0  and batch_num != 0 :
-            torch.save(model.state_dict(), fr"{experment_dir}/model_params.pth")
+            torch.save(model.state_dict(), fr"{experiment_dir}/model_params.pth")
             print("saved")
         if batch_num % 200 == 0 and batch_num != 0:
             model.eval()
@@ -113,25 +117,25 @@ def train(learning_rate=1e-03, batch_size=16, data_samples=150000, ues_num=2, st
             mean_distance += test_1sample(model,np.array([[150,165], [170,205]]),tau=tau, toPlot=True,input_power=input_power,bands=bands,NS=NS)
             mean_distance = mean_distance/5
             error_list.append(mean_distance)
-            plot_validation(error_list,experment_dir)
+            plot_validation(error_list,experiment_dir)
             print(f"mean error ={mean_distance}") 
             test_1sample(model,np.array([[40, 5]]),tau=tau, toPlot=True,input_power=input_power,bands=bands,NS=NS)
             model.train()
     torch.save(model.state_dict(), fr"{experment_dir}/model_params.pth")
-    return model, fr"{experment_dir}/model_params.pth"
+    return model, fr"{experiment_dir}/model_params.pth"
 
 
 if __name__ == "__main__":
     job_array = len(sys.argv) > 1
     if not job_array:
-        model, model_path = train(experment_name=experment_name,tau = 4, load_path=load_path,input_power=5,band=0,NS=50)
+        model, model_path = train(experiment_name=experiment_name,tau = 4, load_path=load_path,input_power=-10,band=1)
     else:
         args = sys.argv[1:]
         args = [float(args[i]) for i in range(len(args))]
-        print("args:[input_power,lr,batch,tau,NS] =", args)
-        input_power,lr , batch, tau, ns = args
-        band=0
-        model, model_path = train(learning_rate=lr, batch_size= int(batch),tau=int(tau),input_power=input_power ,experment_name=experment_name, load_path=load_path,band=band,NS=int(ns))
+        print("args:[input_power,lr,batch,tau] =", args)
+        input_power,lr , batch, tau = args
+        band=1
+        model, model_path = train(learning_rate=lr, batch_size= int(batch),tau=int(tau),input_power=input_power ,experiment_name=experiment_name, load_path=load_path,band=band)
         input_power_values = [input_power]
         ns = int(ns)
         test_and_save(1,input_power_values,model_path,"all",band=band,NS=ns)
