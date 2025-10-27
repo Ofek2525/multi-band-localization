@@ -8,6 +8,7 @@ def plot_validation(error_list,save_dir):
     plt.xlabel("batch")
     plt.ylabel("Error [m]")
     plt.grid(True)
+    plt.yscale('log')
     plt.savefig(os.path.join(save_dir, f"training_learn_curve"))
     plt.savefig(os.path.join(ROOT_DIR,"results", f"training_learn_curve"))
     plt.close()

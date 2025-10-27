@@ -9,23 +9,24 @@ from test import test_1sample
 from dir_definitions import ROOT_DIR
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-BS_num =2
-model_path = r"z_exp/2025-06-30_01:05#for_paper1#tau =4 lr=0.001,batch=20,ues=2,k=[20, 20, 20, 20],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[4, 4, 4, 4],NS=50,input_power=10.0dBm"
+BS_num =12
+model_path = r"z_exp/2025-09-17_19:12#back_to_k20#tau =1 lr=0.0008,batch=16,ues=2,k=[20, 20, 20, 20],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[4, 4, 4, 4],NS=50,input_power=5.0dBm"
 if "model_params.pth" not in model_path:
     model_path = fr"{model_path}/model_params.pth"
 model_path = fr"{ROOT_DIR}/{model_path}"
-no_nn = 1
+no_nn = 0
 def main():
 
     # for cases when exp_parans are multiband:
-    main_band = 4
+    main_band =3
     # 1 for single band 6G with no net
     # 2 for single band 12G with no net
     # 3 for single band 18G with no net
     # 4 for single band 24G with no net
 
     bands = None
-    ues_pos = np.array([[75, 195],[260,410]])#[[50,220],[580, 380]]#[245, 355]#[160, 215]#[100,90]#[240,370]#[120,125]#[50,15]  # transmitter UE position    
+    problematic =[[[790, 0], [450, 145]], [[430, 20], [450, 145]], [[735, 25], [410, 195]], [[730, 30], [420, 100]], [[675, 50], [450, 145]], [[665, 55], [440, 80]], [[635, 70], [445, 155]], [[660, 75], [440, 80]], [[440, 80], [610, 85]], [[440, 80], [435, 180]], [[400, 85], [455, 175]], [[610, 85], [420, 100]], [[560, 110], [445, 155]], [[575, 115], [450, 165]], [[450, 145], [560, 155]], [[575, 145], [410, 195]]]
+    ues_pos = np.array([[790,0]])#[[50,220],[580, 380]]#[245, 355]#[160, 215]#[100,90]#[240,370]#[120,125]#[50,15]  # transmitter UE position    
     if no_nn == 0:
         if len(fc) == 1:
             model = SubSpaceNET().to(DEVICE)

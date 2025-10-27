@@ -31,8 +31,12 @@ def music_loss(RY, data_label, band, M):
         # for i in range(1,D):
         #     u_H = torch.cat((eig_vec[b,:,:-(i+1)],eig_vec[b,:,-i:]),dim=1).conj().transpose(0, 1)
         #     R = u_H @ W
-        #     loss_list[i] = (torch.sum(torch.abs(R) ** 2))    
-        mloss += torch.sum(torch.abs(R) ** 2) #+ 3*(torch.exp(3*torch.sum(eig_val[b,:-M])/((eig_val[b,-M]*eig_val.shape[1]))) - 3*torch.sum(eig_val[b,:-M])/((eig_val[b,-M]*eig_val.shape[1])) -1)
+        #     loss_list[i] = (torch.sum(torch.abs(R) ** 2)) 
+        eig_vec_loss = torch.sum(torch.abs(R) ** 2) 
+        mloss += eig_vec_loss#+ 3*(torch.exp(3*torch.sum(eig_val[b,:-M])/((eig_val[b,-M]*eig_val.shape[1]))) - 3*torch.sum(eig_val[b,:-M])/((eig_val[b,-M]*eig_val.shape[1])) -1)
+        # if eig_vec_loss < 150:
+        #     mloss -= 25 * eig_val[b,-1] +25 * eig_val[b,-2]
+
 
     return mloss/len(data_label)
 

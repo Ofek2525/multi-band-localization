@@ -26,10 +26,10 @@ import random
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-experment_name = "for_paper_3ues_6ghz"
+experment_name = "retrain1"
 load_path =r""
 #learning_rate=0.0001/4
-def train(learning_rate=1e-03, batch_size=20, data_samples=150000, ues_num=3, step=2500, alpha = 0.5,all_BS = 1,input_power=input_power,tau =tau,band=0, experment_name = "", load_path =""):
+def train(learning_rate=1e-03, batch_size=16, data_samples=150000, ues_num=2, step=3000, alpha = 0.5,all_BS = 1,input_power=input_power,tau =tau,NS=NS,band=0, experment_name = "", load_path =""):
     torch.manual_seed(seed)
     np.random.seed(seed)
     random.seed(seed)
@@ -72,15 +72,11 @@ def train(learning_rate=1e-03, batch_size=20, data_samples=150000, ues_num=3, st
         df = pd.read_csv(csv_filename)
         num_rows = len(df)
             #####
-        try:
-            csv_rows_per_sample = [random.sample(range(1, num_rows), ues_num) for _ in range(batch_size)]
-        except:
-            print("##############", BS_num)
-            continue
+        csv_rows_per_sample = [random.sample(range(1, num_rows), ues_num) for _ in range(batch_size)]    
         # for each frequency sub-band
         for band in bands:
             # generate the channel
-            ys, ues_data = ues_rows_channel(band, batch_size, tmp_ues_num, csv_rows_per_sample,input_power=input_power, BS_num=BS_num, state="train", augmentation=False)
+            ys, ues_data = ues_rows_channel(band, batch_size, tmp_ues_num, num_rows,input_power=input_power, BS_num=BS_num,NS=NS, state="train", augmentation=False)
             per_band_y.append(ys)
             per_band_data.append(ues_data)
         
@@ -108,18 +104,18 @@ def train(learning_rate=1e-03, batch_size=20, data_samples=150000, ues_num=3, st
         if batch_num % 100 == 0  and batch_num != 0 :
             torch.save(model.state_dict(), fr"{experment_dir}/model_params.pth")
             print("saved")
-        if batch_num % 200 == 0:
+        if batch_num % 200 == 0 and batch_num != 0:
             model.eval()
-            mean_distance = test_1sample(model,np.array([[75, 75],[140,175]]),tau=tau, toPlot=True,input_power=input_power,bands=bands)
-            mean_distance += test_1sample(model,np.array([[190,245],[75, 75]]),tau=tau, toPlot=True,input_power=input_power,bands=bands)
-            mean_distance += test_1sample(model,np.array([[215,315], [320,430]]),tau=tau, toPlot=True,input_power=input_power,bands=bands)
-            mean_distance += test_1sample(model,np.array([[215,315], [235,335]]),tau=tau, toPlot=True,input_power=input_power,bands=bands)
-            mean_distance += test_1sample(model,np.array([[150,165], [170,205]]),tau=tau, toPlot=True,input_power=input_power,bands=bands)
+            mean_distance = test_1sample(model,np.array([[75, 75],[140,175]]),tau=tau, toPlot=True,input_power=input_power,bands=bands,NS=NS)
+            mean_distance += test_1sample(model,np.array([[190,245],[75, 75]]),tau=tau, toPlot=True,input_power=input_power,bands=bands,NS=NS)
+            mean_distance += test_1sample(model,np.array([[215,315], [320,430]]),tau=tau, toPlot=True,input_power=input_power,bands=bands,NS=NS)
+            mean_distance += test_1sample(model,np.array([[70,55], [235,335]]),tau=tau, toPlot=True,input_power=input_power,bands=bands,NS=NS)
+            mean_distance += test_1sample(model,np.array([[150,165], [170,205]]),tau=tau, toPlot=True,input_power=input_power,bands=bands,NS=NS)
             mean_distance = mean_distance/5
             error_list.append(mean_distance)
             plot_validation(error_list,experment_dir)
             print(f"mean error ={mean_distance}") 
-            test_1sample(model,np.array([[40, 5]]),tau=tau, toPlot=True,input_power=input_power,bands=bands)
+            test_1sample(model,np.array([[40, 5]]),tau=tau, toPlot=True,input_power=input_power,bands=bands,NS=NS)
             model.train()
     torch.save(model.state_dict(), fr"{experment_dir}/model_params.pth")
     return model, fr"{experment_dir}/model_params.pth"
@@ -128,16 +124,17 @@ def train(learning_rate=1e-03, batch_size=20, data_samples=150000, ues_num=3, st
 if __name__ == "__main__":
     job_array = len(sys.argv) > 1
     if not job_array:
-        model, model_path = train(experment_name=experment_name,tau = 4, load_path=load_path,input_power=-10,band=1)
+        model, model_path = train(experment_name=experment_name,tau = 4, load_path=load_path,input_power=5,band=0,NS=50)
     else:
         args = sys.argv[1:]
         args = [float(args[i]) for i in range(len(args))]
-        print("args:[input_power,lr,batch,tau] =", args)
-        input_power,lr , batch, tau = args
-        band=1
-        model, model_path = train(learning_rate=lr, batch_size= int(batch),tau=int(tau),input_power=input_power ,experment_name=experment_name, load_path=load_path,band=band)
+        print("args:[input_power,lr,batch,tau,NS] =", args)
+        input_power,lr , batch, tau, ns = args
+        band=0
+        model, model_path = train(learning_rate=lr, batch_size= int(batch),tau=int(tau),input_power=input_power ,experment_name=experment_name, load_path=load_path,band=band,NS=int(ns))
         input_power_values = [input_power]
-        test_and_save(1,input_power_values,model_path,"all",band=band)
-        test_and_save(2,input_power_values,model_path,"all",band=band)
-        test_and_save(3,input_power_values,model_path,"all",band=band)
-        print("args:[input_power,lr,batch,tau] =",args)
+        ns = int(ns)
+        test_and_save(1,input_power_values,model_path,"all",band=band,NS=ns)
+        test_and_save(2,input_power_values,model_path,"all",band=band,NS=ns)
+        #test_and_save(3,input_power_values,model_path,"all",band=band,NS=ns)
+        print("args:[input_power,lr,batch,tau,NS] =",args)

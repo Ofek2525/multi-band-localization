@@ -6,14 +6,14 @@ import os
 ROOT = "/home/ofekshis/multi-band-localization"
 
 # All no NN DATA
-no_nn_path = fr"{ROOT}/z_exp/0important_copys/results_for_all_musics:NS=50,Tres=0.03"
+no_nn_path = fr"{ROOT}/z_exp/2025-08-16_22:47#K40_job#tau =4 lr=0.0007,batch=8,ues=2,k=[40, 40, 40, 40],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[12, 12, 12, 12],NS=50,input_power=0.0dBm"
 
 # All NN DATA per SNR:
-nn_m15snr_path = fr"{ROOT}/"
-nn_m10snr_path = fr"{ROOT}/"
-nn_m5snr_path = fr"{ROOT}/"
-nn_0snr_path = fr"{ROOT}/"
-nn_5snr_path = fr"{ROOT}/"
+nn_m15snr_path = fr"{ROOT}/z_exp/2025-08-16_22:48#K40_job#tau =4 lr=0.0007,batch=8,ues=2,k=[40, 40, 40, 40],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[12, 12, 12, 12],NS=50,input_power=-15.0dBm"
+nn_m10snr_path = fr"{ROOT}/z_exp/2025-08-16_22:47#K40_job#tau =4 lr=0.0007,batch=8,ues=2,k=[40, 40, 40, 40],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[12, 12, 12, 12],NS=50,input_power=-10.0dBm"
+nn_m5snr_path = fr"{ROOT}/z_exp/2025-08-16_22:47#K40_job#tau =4 lr=0.0007,batch=8,ues=2,k=[40, 40, 40, 40],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[12, 12, 12, 12],NS=50,input_power=-5.0dBm"
+nn_0snr_path = fr"{ROOT}/z_exp/2025-08-16_22:47#K40_job#tau =4 lr=0.0007,batch=8,ues=2,k=[40, 40, 40, 40],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[12, 12, 12, 12],NS=50,input_power=0.0dBm"
+nn_5snr_path = fr"{ROOT}/z_exp/2025-08-16_22:47#K40_job#tau =4 lr=0.0007,batch=8,ues=2,k=[40, 40, 40, 40],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[12, 12, 12, 12],NS=50,input_power=5.0dBm"
 nn_10snr_path = fr"{ROOT}/"
 
 nn_data_paths = [nn_m15snr_path, nn_m10snr_path, nn_m5snr_path, nn_0snr_path, nn_5snr_path]
@@ -126,5 +126,5 @@ def plot_MultiBandNet_and_music_singal_band(ue_num, samples_only_per_snr_FLAG=Tr
     
 
 if __name__ == "__main__":
-    for i in [1]:
+    for i in [2]:
         plot_MultiBandNet_and_music_singal_band(i, samples_only_per_snr_FLAG=True)

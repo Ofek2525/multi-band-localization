@@ -1,8 +1,9 @@
 import pandas as pd
 import numpy as np
-import time
+import random
 
 from utils.bands_manipulation import Band, get_bands_from_conf
+from utils.check_if_close import too_close
 from exp_params import K, Nr, fc, BW, input_power
 from dir_definitions import RAYTRACING_DIR, ALLBSs_DIR
 
@@ -57,7 +58,7 @@ def get_ue_info_by_row(csv_filename: str, row_num: int,sweeped_power=None, rand_
     angle_change = 0
     if rand_aoa_flag:
         real_los_aoa = row['aod_1'] + 90
-        new_los_aoa = np.random.uniform(-90, 90)
+        new_los_aoa = np.random.uniform(-80, 80)
         angle_change = new_los_aoa - real_los_aoa
     
     powers = [(ue_power - row[f'path_loss_{i}']) for i in range(1, n_path + 1) if f'path_loss_{i}' in row]
@@ -108,9 +109,10 @@ def get_ues_info(csv_filename: str, ue_locs: list, sweeped_power=None):
 
 
 
-def generate_batches_by_rows(band: Band, csv_rows_per_sample, BS_num, state="train",input_power= None, augmentation=False):
+def generate_batches_by_rows(band: Band, batch_size,ues_num,num_rows, BS_num, state="train",input_power= None, augmentation=False):
     band_freq_file_in_G = int(band.fc / 1000)
     csv_filename = rf"{ALLBSs_DIR}/bs_{BS_num}/{state}_{band_freq_file_in_G}Ghz.csv"
+    csv_rows_per_sample = [random.sample(range(1, num_rows), ues_num) for _ in range(batch_size)]
 
     batch = []
     for sample in csv_rows_per_sample:
@@ -118,5 +120,26 @@ def generate_batches_by_rows(band: Band, csv_rows_per_sample, BS_num, state="tra
         for ue_row in sample:
             results.append(get_ue_info_by_row(csv_filename, ue_row,input_power, rand_aoa_flag=augmentation))
         batch.append(results)
+    # for sample_indx in range(batch_size):
+    #     for _ in range(5):
+    #         if _ == 4: 
+    #             batch.append(results)
+    #             break
+    #         results = []
+    #         sample = random.sample(range(1, num_rows), ues_num)
+    #         ue_locs = []
+    #         cond = 0
+    #         for ue_row in sample:
+    #             ue_info = get_ue_info_by_row(csv_filename, ue_row,input_power, rand_aoa_flag=augmentation)
+    #             results.append(ue_info)
+    #             ue_locs.append(ue_info['ue_loc'][:2])
+    #             if not(-80<ue_info["aoa"][0]<80): cond =1
+    #         if cond: continue 
+    #         ue_locs_array = np.array(ue_locs)
+    #         if too_close(ue_locs_array,40): continue
+    #         batch.append(results)
+    #         break
+            
+
     return batch
 

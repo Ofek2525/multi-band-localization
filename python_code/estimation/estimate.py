@@ -4,11 +4,11 @@ from scipy.ndimage import maximum_filter
 from scipy.ndimage import label
 from scipy.ndimage import find_objects
 
-from estimation.music import music
+from estimation.music import music,increase_res
 from estimation.beamformer import single_band_beamformer,multi_band_beamformer
 from estimation.net import single_nurone
 from utils.bands_manipulation import get_bands_from_conf
-from exp_params import seed, K, Nr, fc, BW, alg, aoa_res, T_res, plot_estimation_results, main_band_idx
+from exp_params import seed, K, Nr, fc, BW, alg, aoa_res, T_res, plot_estimation_results, main_band_idx, increase_res_factor
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
@@ -40,7 +40,8 @@ def find_k_highest_peaks(matrix, k):
             row = int((sl[0].start + sl[0].stop - 1) / 2)
             col = int((sl[1].start + sl[1].stop - 1) / 2)
             value = matrix[row, col]
-            peaks.append([row, col, value])
+            if row not in [0,matrix.shape[0]-1] and col not in [0,matrix.shape[1]-1]:
+                peaks.append([row, col, value])
     except Exception as e:
         pass
 
@@ -114,6 +115,9 @@ def estimate_evaluation(alg, multiband, per_band_y, bands, model, num_of_ues,tau
         peaks_idx = find_k_highest_peaks(sample, num_of_ues)
         aoa = aoa_grid[peaks_idx[:,0].astype(int)]
         toa = times_grid[peaks_idx[:,1].astype(int)]
+        if increase_res_factor != 1:
+            assert(alg == 'MUSIC')
+            aoa, toa = increase_res(main_band, alternative_RY, aoa,toa)    
         peaks[idx, :, 0] = np.degrees(aoa)
         peaks[idx, :, 1] = toa
         

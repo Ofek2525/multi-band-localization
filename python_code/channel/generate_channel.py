@@ -8,7 +8,7 @@ from channel.channel_loader import get_ues_info, generate_batches_by_rows
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-def get_channel(ues_loc, band, BS_num=1, input_power=None, state="test"):
+def get_channel(ues_loc, band, BS_num=1, input_power=None, state="test",NS=NS):
     """
     :param ues_loc: [ue_num_simultaneously X 2]
     :param band:
@@ -18,12 +18,12 @@ def get_channel(ues_loc, band, BS_num=1, input_power=None, state="test"):
     csv_filename = rf"{ALLBSs_DIR}/bs_{BS_num}/{state}_{band_freq_file_in_G}Ghz.csv"
 
     ues_data = get_ues_info(csv_filename, ues_loc, input_power)
-    y = sum([single_ue_channel(ue_data, band) for ue_data in ues_data]).unsqueeze(0)/len(ues_loc)
+    y = sum([single_ue_channel(ue_data, band,NS=NS) for ue_data in ues_data]).unsqueeze(0)/len(ues_loc)
     return y, ues_data
 
 
 
-def ues_rows_channel(band, batch_size, ues_num, csv_rows_per_sample,input_power=None, BS_num=1, state="train", augmentation=False):
+def ues_rows_channel(band, batch_size, ues_num, num_rows,input_power=None, BS_num=1,NS=NS, state="train", augmentation=False):
     """
     :param band:
     :param batch_size:
@@ -31,15 +31,15 @@ def ues_rows_channel(band, batch_size, ues_num, csv_rows_per_sample,input_power=
     :return:ys,ues_data
     """
 
-    ues_data = generate_batches_by_rows(band, csv_rows_per_sample, BS_num, state,input_power, augmentation=augmentation)
+    ues_data = generate_batches_by_rows(band, batch_size,ues_num,num_rows, BS_num, state,input_power, augmentation=augmentation)
     ys = []
     for i in range(batch_size):
-        ys.append(sum(single_ue_channel(ues_data[i][ue],band) for ue in range(ues_num))/ues_num)
+        ys.append(sum(single_ue_channel(ues_data[i][ue],band,NS=NS) for ue in range(ues_num))/ues_num)
     ys = torch.stack(ys, dim=0)
     return ys, ues_data
 
 
-def single_ue_channel(ue_data, band):
+def single_ue_channel(ue_data, band,NS=NS):
     """
     :param ue_data: dictionaire with keys: ue_loc, n_path, powers, toa, aoa
     :param band:
