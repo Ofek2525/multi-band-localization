@@ -121,7 +121,7 @@ def train(learning_rate=1e-03, batch_size=20, data_samples=150000, ues_num=3, st
             print(f"mean error ={mean_distance}") 
             test_1sample(model,np.array([[40, 5]]),tau=tau, toPlot=True,input_power=input_power,bands=bands,NS=NS)
             model.train()
-    torch.save(model.state_dict(), fr"{experment_dir}/model_params.pth")
+    torch.save(model.state_dict(), fr"{experiment_dir}/model_params.pth")
     return model, fr"{experiment_dir}/model_params.pth"
 
 
