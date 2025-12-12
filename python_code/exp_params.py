@@ -11,7 +11,7 @@ NS = 50
 num_of_BSs = 15
 
 # parameters
-tau = 1
+tau = 4
 alg = 'MUSIC'  # 'Beamformer','MUSIC','MultiBeamformer'
 aoa_res = 0.2  # resolution in degrees for the azimuth dictionary
 T_res = 0.03  # resolution in micro second for the delay dictionary
