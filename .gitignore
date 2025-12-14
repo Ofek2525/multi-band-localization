@@ -22,8 +22,7 @@ results/
 *.ckpt
 
 # Data files (large datasets)
-resources/all_BSs/
-resources/raytracing/
+resources/
 
 # Python virtual environments
 venv/
