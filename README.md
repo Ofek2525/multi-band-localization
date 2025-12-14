@@ -33,8 +33,10 @@ python python_code/main.py
 # Single band training
 python python_code/train.py
 
-# Training with custom parameters [input_power, learning_rate, batch_size, tau]
-python python_code/train.py -10 0.001 20 4
+# Training with custom parameters [input_power, learning_rate, batch_size, tau, NS]
+# NS is optional; if omitted, uses default from exp_params.py
+python python_code/train.py -10 0.001 20 4 50
+```
 ```
 
 ### Comprehensive Testing

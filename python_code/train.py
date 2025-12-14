@@ -74,8 +74,8 @@ def train(learning_rate=1e-03, batch_size=20, data_samples=150000, ues_num=3, st
             #####
         try:
             csv_rows_per_sample = [random.sample(range(1, num_rows), ues_num) for _ in range(batch_size)]
-        except:
-            print(f"Warning: Unable to sample {ues_num} users from {num_rows} rows for BS {BS_num}")
+        except ValueError as e:
+            print(f"Warning: Unable to sample {ues_num} users from {num_rows} rows for BS {BS_num}: {e}")
             continue
         # for each frequency sub-band
         for band in bands:
@@ -132,13 +132,17 @@ if __name__ == "__main__":
     else:
         args = sys.argv[1:]
         args = [float(args[i]) for i in range(len(args))]
-        print("args:[input_power,lr,batch,tau] =", args)
-        input_power,lr , batch, tau = args
-        band=1
-        model, model_path = train(learning_rate=lr, batch_size= int(batch),tau=int(tau),input_power=input_power ,experiment_name=experiment_name, load_path=load_path,band=band)
+        if len(args) >= 5:
+            print("args:[input_power,lr,batch,tau,NS] =", args)
+            input_power, lr, batch, tau, ns = args
+            ns = int(ns)
+        else:
+            print("args:[input_power,lr,batch,tau] =", args)
+            input_power, lr, batch, tau = args
+            ns = NS  # Use default NS from exp_params
+        band = 1
+        model, model_path = train(learning_rate=lr, batch_size=int(batch), tau=int(tau), input_power=input_power, experiment_name=experiment_name, load_path=load_path, band=band)
         input_power_values = [input_power]
-        ns = int(ns)
-        test_and_save(1,input_power_values,model_path,"all",band=band,NS=ns)
-        test_and_save(2,input_power_values,model_path,"all",band=band,NS=ns)
-        #test_and_save(3,input_power_values,model_path,"all",band=band,NS=ns)
-        print("args:[input_power,lr,batch,tau,NS] =",args)
+        test_and_save(1, input_power_values, model_path, "all", band=band, NS=ns)
+        test_and_save(2, input_power_values, model_path, "all", band=band, NS=ns)
+        #test_and_save(3, input_power_values, model_path, "all", band=band, NS=ns)

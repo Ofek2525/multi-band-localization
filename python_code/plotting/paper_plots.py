@@ -2,8 +2,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import os
+import sys
 
-ROOT = "/home/ofekshis/multi-band-localization"
+# Add parent directory to path to import dir_definitions
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from dir_definitions import ROOT_DIR
+
+ROOT = ROOT_DIR
 
 # All no NN DATA
 no_nn_path = fr"{ROOT}/z_exp/2025-08-16_22:47#K40_job#tau =4 lr=0.0007,batch=8,ues=2,k=[40, 40, 40, 40],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[12, 12, 12, 12],NS=50,input_power=0.0dBm"

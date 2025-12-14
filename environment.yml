@@ -239,4 +239,3 @@ dependencies:
       - pytz==2025.2
       - sortedcontainers==2.4.0
       - sympy==1.13.1
-prefix: /home/ofekshis/.conda/envs/pytorch_py310_cu121

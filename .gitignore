@@ -13,3 +13,38 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Experiment outputs and trained models
+z_exp/
+results/
+*.pth
+*.pt
+*.ckpt
+
+# Data files (large datasets)
+resources/all_BSs/
+resources/raytracing/
+
+# Python virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+.eggs/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment variables
+.env
+.env.local

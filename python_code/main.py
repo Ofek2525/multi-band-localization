@@ -1,46 +1,81 @@
 import numpy as np
 import torch
+import os
+import sys
 from estimation.net import single_nurone, SubSpaceNET
 from estimation.multiband_net import Multi_Band_SubSpaceNET, Encoder_6k, Encoder_12k, Encoder_18k, Encoder_24k, Decoder
 from utils.bands_manipulation import get_bands_from_conf, Band
-from exp_params import seed, tau,K, Nr, fc, BW, alg, aoa_res, T_res, plot_estimation_results
+from exp_params import seed, tau, K, Nr, fc, BW, alg, aoa_res, T_res, plot_estimation_results
 from plotting.map_plot import plot_angle_time
 from test import test_1sample
 from dir_definitions import ROOT_DIR
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-BS_num =12
-model_path = r"z_exp/2025-09-17_19:12#back_to_k20#tau =1 lr=0.0008,batch=16,ues=2,k=[20, 20, 20, 20],Nr=[4, 8, 16, 32],fc=[6000, 12000, 18000, 24000],BW=[4, 4, 4, 4],NS=50,input_power=5.0dBm"
-if "model_params.pth" not in model_path:
-    model_path = fr"{model_path}/model_params.pth"
-model_path = fr"{ROOT_DIR}/{model_path}"
-no_nn = 0
-def main():
 
-    # for cases when exp_parans are multiband:
-    main_band =3
+# Configuration: Can be set via environment variable or command line argument
+BS_num = int(os.getenv("BS_NUM", "12"))
+no_nn = int(os.getenv("NO_NN", "0"))
+
+# Model path: Use command line argument if provided, otherwise environment variable, otherwise None
+if len(sys.argv) > 1:
+    model_path = sys.argv[1]
+elif os.getenv("MODEL_PATH"):
+    model_path = os.getenv("MODEL_PATH")
+else:
+    # Default example path - users should set MODEL_PATH or pass as argument
+    model_path = None
+    print("Warning: No model path provided. Set MODEL_PATH environment variable or pass as command line argument.")
+    print("Usage: python python_code/main.py <model_path> [BS_num] [no_nn]")
+    sys.exit(1)
+
+if model_path and "model_params.pth" not in model_path:
+    model_path = fr"{model_path}/model_params.pth"
+if model_path and not os.path.isabs(model_path):
+    model_path = fr"{ROOT_DIR}/{model_path}"
+
+# Optional: Override BS_num and no_nn from command line
+if len(sys.argv) > 2:
+    BS_num = int(sys.argv[2])
+if len(sys.argv) > 3:
+    no_nn = int(sys.argv[3])
+def main():
+    """
+    Main function to run localization estimation.
+    
+    Model path should be provided via:
+    - Command line argument: python main.py <model_path> [BS_num] [no_nn]
+    - Environment variable: MODEL_PATH
+    """
+    # for cases when exp_params are multiband:
+    main_band = 3
     # 1 for single band 6G with no net
     # 2 for single band 12G with no net
     # 3 for single band 18G with no net
     # 4 for single band 24G with no net
 
     bands = None
-    problematic =[[[790, 0], [450, 145]], [[430, 20], [450, 145]], [[735, 25], [410, 195]], [[730, 30], [420, 100]], [[675, 50], [450, 145]], [[665, 55], [440, 80]], [[635, 70], [445, 155]], [[660, 75], [440, 80]], [[440, 80], [610, 85]], [[440, 80], [435, 180]], [[400, 85], [455, 175]], [[610, 85], [420, 100]], [[560, 110], [445, 155]], [[575, 115], [450, 165]], [[450, 145], [560, 155]], [[575, 145], [410, 195]]]
-    ues_pos = np.array([[790,0]])#[[50,220],[580, 380]]#[245, 355]#[160, 215]#[100,90]#[240,370]#[120,125]#[50,15]  # transmitter UE position    
+    # Example UE positions for testing
+    ues_pos = np.array([[790, 0]])  # transmitter UE position
+    
     if no_nn == 0:
         if len(fc) == 1:
             model = SubSpaceNET().to(DEVICE)
         elif len(fc) == 4:
             model = Multi_Band_SubSpaceNET(tau).to(DEVICE)
         else:
-            print("error with params")
+            raise ValueError(f"Unsupported number of frequency bands: {len(fc)}. Expected 1 or 4.")
+        
+        if not os.path.exists(model_path):
+            raise FileNotFoundError(f"Model file not found: {model_path}")
         model.load_state_dict(torch.load(model_path, weights_only=True))
         model.eval()
     else:
         model = single_nurone().to(DEVICE)
         if len(fc) != 1:
             bands = [get_bands_from_conf(fc, Nr, K, BW)[main_band - 1]]
-    test_1sample(model, ues_pos, toPlot=True,name=r"results/AOA_and_delay_est_net.png",zoom =False, bands=bands,BS_num =BS_num)
+    
+    test_1sample(model, ues_pos, toPlot=True, name=os.path.join(ROOT_DIR, "results", "AOA_and_delay_est_net.png"), 
+                 zoom=False, bands=bands, BS_num=BS_num)
 
 
 if __name__ == "__main__":
