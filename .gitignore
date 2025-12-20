@@ -152,8 +152,8 @@ results/*.jpg
 results/*.jpeg
 results/*.svg
 
-# Data files (if too large, uncomment)
-# resources/**/*.csv
+# Data files (large datasets - kept locally but not in repo)
+resources/
 
 # OS files
 Thumbs.db

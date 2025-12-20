@@ -86,15 +86,3 @@ The `Multi_Band_SubSpaceNET` architecture consists of:
 2. **Covariance estimation**: Compute autocorrelation matrices (with or without neural network enhancement)
 3. **AoA/ToA estimation**: Apply MUSIC algorithm to estimate angles and delays
 4. **Position estimation**: Convert AoA/ToA to 2D positions using geometric relationships
-
-## Data
-
-The project uses ray-tracing simulation data stored in CSV format:
-- Training data: `resources/all_BSs/bs_*/train_*Ghz.csv`
-- Test data: `resources/all_BSs/bs_*/test_*Ghz.csv`
-
-Each CSV file contains channel parameters including:
-- UE and BS positions
-- Angle-of-Arrival (AoA)
-- Time-of-Arrival (ToA)
-- Channel gains
